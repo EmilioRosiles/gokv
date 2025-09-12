@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+option go_package = "./clusterpb";
+
+package clusterpb;
+
+service ClusterNode {
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  rpc Get(GetRequest) returns (GetResponse);
+  rpc Set(SetRequest) returns (SetResponse);
+}
+
+message Node {
+  string node_id = 1;
+  string node_addr = 2;
+  bool alive = 3;
+  int64 last_seen = 4;
+}
+
+message PositionEntry {
+  string id = 1;
+  double lat = 2;
+  double lon = 3;
+  int64 timestamp = 4;
+}
+
+
+message HeartbeatRequest {
+  Node self = 1;
+  repeated Node peers = 2;
+}
+
+message HeartbeatResponse {
+  repeated Node peers = 1;
+}
+
+message GetRequest {
+  string node_id = 1;
+  uint64 cell_id = 2;
+}
+
+message GetResponse {
+  repeated PositionEntry positions = 1;
+}
+
+message SetRequest {
+  string node_id = 1;
+  repeated PositionEntry positions = 3;
+}
+
+message SetResponse {
+  bool success = 1;
+}
