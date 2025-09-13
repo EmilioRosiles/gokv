@@ -1,0 +1,49 @@
+x-gokv-base: &gokv-base
+  image: gokv
+  expose:
+    - "50051"
+  deploy:
+    resources:
+      limits:
+        cpus: '0.5'
+        memory: 512M
+      reservations:
+        cpus: '0.25'
+        memory: 128M
+
+services:
+  gokv1:
+    <<: *gokv-base
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    environment:
+      HOST: "gokv1"
+      NODE_ID: "node1"
+      GRPC_PORT: 50051
+    
+  gokv2:
+    <<: *gokv-base
+    environment:
+      HOST: "gokv2"
+      NODE_ID: "node2"
+      GRPC_PORT: 50051
+      SEED_NODE_ID: "node1"
+      SEED_NODE_ADDR: "gokv1:50051"
+    depends_on:
+      - gokv1
+
+  gokv3:
+    <<: *gokv-base
+    environment:
+      HOST: "gokv3"
+      NODE_ID: "node3"
+      GRPC_PORT: 50051
+      SEED_NODE_ID: "node1"
+      SEED_NODE_ADDR: "gokv1:50051"
+    depends_on:
+      - gokv1
+
+networks:
+  gokv-cluster:
+    driver: bridge

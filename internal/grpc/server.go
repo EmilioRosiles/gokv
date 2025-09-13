@@ -44,3 +44,7 @@ func (s *cacheNodeServer) Heartbeat(ctx context.Context, req *clusterpb.Heartbea
 	s.cm.Mu.RUnlock()
 	return &clusterpb.HeartbeatResponse{Peers: peerspb}, nil
 }
+
+func (s *cacheNodeServer) RunCommand() {
+
+}

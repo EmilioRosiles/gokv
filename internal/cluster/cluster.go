@@ -254,3 +254,7 @@ func (cm *ClusterManager) MergeState(nodes []*clusterpb.Node) {
 func (cm *ClusterManager) Rebalance() {
 	// TODO: implement for each data structure
 }
+
+func (cm *ClusterManager) RunCommand() {
+	// TODO: implement for each data structure
+}
