@@ -8,9 +8,13 @@ import (
 
 	"gokv/internal/cluster"
 	"gokv/internal/grpc"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	godotenv.Load()
+
 	NODE_ID := os.Getenv("NODE_ID")
 	HOST := os.Getenv("HOST")
 	GRPC_PORT := os.Getenv("GRPC_PORT")
@@ -18,7 +22,6 @@ func main() {
 	SEED_NODE_ADDR := os.Getenv("SEED_NODE_ADDR")
 
 	cm := cluster.NewClusterManager(NODE_ID, HOST+":"+GRPC_PORT, 3)
-
 	go grpc.StartGrpcServer(HOST, GRPC_PORT, cm)
 
 	if SEED_NODE_ID != "" && SEED_NODE_ADDR != "" {

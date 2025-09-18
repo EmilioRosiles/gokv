@@ -33,10 +33,10 @@ func New(vNodeCount int, fn HashFunc) *HashRing {
 }
 
 // Add node to hash ring
-func (h *HashRing) Add(nodes ...string) {
+func (h *HashRing) Add(nodeIDs ...string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	for _, node := range nodes {
+	for _, node := range nodeIDs {
 		for i := 0; i < h.vNodeCount; i++ {
 			hash := int(h.hash([]byte(strconv.Itoa(i) + node)))
 			h.keys = append(h.keys, hash)
@@ -47,12 +47,12 @@ func (h *HashRing) Add(nodes ...string) {
 }
 
 // Removes node from hash ring
-func (h *HashRing) Remove(node string) {
+func (h *HashRing) Remove(nodeID string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	for i := 0; i < h.vNodeCount; i++ {
-		hash := int(h.hash([]byte(strconv.Itoa(i) + node)))
+		hash := int(h.hash([]byte(strconv.Itoa(i) + nodeID)))
 		delete(h.hashMap, hash)
 
 		for j, k := range h.keys {
@@ -65,14 +65,14 @@ func (h *HashRing) Remove(node string) {
 }
 
 // Get ID of the responsible node for a key
-func (h *HashRing) Get(key string) string {
+func (h *HashRing) Get(nodeID string) string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if len(h.keys) == 0 {
 		return ""
 	}
 
-	hash := int(h.hash([]byte(key)))
+	hash := int(h.hash([]byte(nodeID)))
 	idx := sort.Search(len(h.keys), func(i int) bool {
 		return h.keys[i] >= hash
 	})
