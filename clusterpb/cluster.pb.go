@@ -89,6 +89,58 @@ func (x *Node) GetLastSeen() int64 {
 	return 0
 }
 
+type Value struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Data          []byte                 `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Ttl           int64                  `protobuf:"varint,2,opt,name=ttl,proto3" json:"ttl,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Value) Reset() {
+	*x = Value{}
+	mi := &file_proto_cluster_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Value) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Value) ProtoMessage() {}
+
+func (x *Value) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_cluster_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Value.ProtoReflect.Descriptor instead.
+func (*Value) Descriptor() ([]byte, []int) {
+	return file_proto_cluster_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Value) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+func (x *Value) GetTtl() int64 {
+	if x != nil {
+		return x.Ttl
+	}
+	return 0
+}
+
 type HeartbeatRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Self          *Node                  `protobuf:"bytes,1,opt,name=self,proto3" json:"self,omitempty"`
@@ -99,7 +151,7 @@ type HeartbeatRequest struct {
 
 func (x *HeartbeatRequest) Reset() {
 	*x = HeartbeatRequest{}
-	mi := &file_proto_cluster_proto_msgTypes[1]
+	mi := &file_proto_cluster_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -111,7 +163,7 @@ func (x *HeartbeatRequest) String() string {
 func (*HeartbeatRequest) ProtoMessage() {}
 
 func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_cluster_proto_msgTypes[1]
+	mi := &file_proto_cluster_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -124,7 +176,7 @@ func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeartbeatRequest.ProtoReflect.Descriptor instead.
 func (*HeartbeatRequest) Descriptor() ([]byte, []int) {
-	return file_proto_cluster_proto_rawDescGZIP(), []int{1}
+	return file_proto_cluster_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *HeartbeatRequest) GetSelf() *Node {
@@ -150,7 +202,7 @@ type HeartbeatResponse struct {
 
 func (x *HeartbeatResponse) Reset() {
 	*x = HeartbeatResponse{}
-	mi := &file_proto_cluster_proto_msgTypes[2]
+	mi := &file_proto_cluster_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -162,7 +214,7 @@ func (x *HeartbeatResponse) String() string {
 func (*HeartbeatResponse) ProtoMessage() {}
 
 func (x *HeartbeatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_cluster_proto_msgTypes[2]
+	mi := &file_proto_cluster_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -175,7 +227,7 @@ func (x *HeartbeatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeartbeatResponse.ProtoReflect.Descriptor instead.
 func (*HeartbeatResponse) Descriptor() ([]byte, []int) {
-	return file_proto_cluster_proto_rawDescGZIP(), []int{2}
+	return file_proto_cluster_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *HeartbeatResponse) GetPeers() []*Node {
@@ -188,14 +240,14 @@ func (x *HeartbeatResponse) GetPeers() []*Node {
 type GetRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Hash          string                 `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
-	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	Keys          []string               `protobuf:"bytes,2,rep,name=keys,proto3" json:"keys,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetRequest) Reset() {
 	*x = GetRequest{}
-	mi := &file_proto_cluster_proto_msgTypes[3]
+	mi := &file_proto_cluster_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -207,7 +259,7 @@ func (x *GetRequest) String() string {
 func (*GetRequest) ProtoMessage() {}
 
 func (x *GetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_cluster_proto_msgTypes[3]
+	mi := &file_proto_cluster_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -220,7 +272,7 @@ func (x *GetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRequest.ProtoReflect.Descriptor instead.
 func (*GetRequest) Descriptor() ([]byte, []int) {
-	return file_proto_cluster_proto_rawDescGZIP(), []int{3}
+	return file_proto_cluster_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetRequest) GetHash() string {
@@ -230,23 +282,23 @@ func (x *GetRequest) GetHash() string {
 	return ""
 }
 
-func (x *GetRequest) GetKey() string {
+func (x *GetRequest) GetKeys() []string {
 	if x != nil {
-		return x.Key
+		return x.Keys
 	}
-	return ""
+	return nil
 }
 
 type GetResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Data          []byte                 `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Values        map[string]*Value      `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetResponse) Reset() {
 	*x = GetResponse{}
-	mi := &file_proto_cluster_proto_msgTypes[4]
+	mi := &file_proto_cluster_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -258,7 +310,7 @@ func (x *GetResponse) String() string {
 func (*GetResponse) ProtoMessage() {}
 
 func (x *GetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_cluster_proto_msgTypes[4]
+	mi := &file_proto_cluster_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -271,12 +323,12 @@ func (x *GetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetResponse.ProtoReflect.Descriptor instead.
 func (*GetResponse) Descriptor() ([]byte, []int) {
-	return file_proto_cluster_proto_rawDescGZIP(), []int{4}
+	return file_proto_cluster_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *GetResponse) GetData() []byte {
+func (x *GetResponse) GetValues() map[string]*Value {
 	if x != nil {
-		return x.Data
+		return x.Values
 	}
 	return nil
 }
@@ -284,16 +336,14 @@ func (x *GetResponse) GetData() []byte {
 type SetRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Hash          string                 `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
-	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
-	Data          []byte                 `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
-	Ttl           int64                  `protobuf:"varint,4,opt,name=ttl,proto3" json:"ttl,omitempty"`
+	Values        map[string]*Value      `protobuf:"bytes,2,rep,name=values,proto3" json:"values,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SetRequest) Reset() {
 	*x = SetRequest{}
-	mi := &file_proto_cluster_proto_msgTypes[5]
+	mi := &file_proto_cluster_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -305,7 +355,7 @@ func (x *SetRequest) String() string {
 func (*SetRequest) ProtoMessage() {}
 
 func (x *SetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_cluster_proto_msgTypes[5]
+	mi := &file_proto_cluster_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -318,7 +368,7 @@ func (x *SetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetRequest.ProtoReflect.Descriptor instead.
 func (*SetRequest) Descriptor() ([]byte, []int) {
-	return file_proto_cluster_proto_rawDescGZIP(), []int{5}
+	return file_proto_cluster_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *SetRequest) GetHash() string {
@@ -328,25 +378,11 @@ func (x *SetRequest) GetHash() string {
 	return ""
 }
 
-func (x *SetRequest) GetKey() string {
+func (x *SetRequest) GetValues() map[string]*Value {
 	if x != nil {
-		return x.Key
-	}
-	return ""
-}
-
-func (x *SetRequest) GetData() []byte {
-	if x != nil {
-		return x.Data
+		return x.Values
 	}
 	return nil
-}
-
-func (x *SetRequest) GetTtl() int64 {
-	if x != nil {
-		return x.Ttl
-	}
-	return 0
 }
 
 type SetResponse struct {
@@ -358,7 +394,7 @@ type SetResponse struct {
 
 func (x *SetResponse) Reset() {
 	*x = SetResponse{}
-	mi := &file_proto_cluster_proto_msgTypes[6]
+	mi := &file_proto_cluster_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -370,7 +406,7 @@ func (x *SetResponse) String() string {
 func (*SetResponse) ProtoMessage() {}
 
 func (x *SetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_cluster_proto_msgTypes[6]
+	mi := &file_proto_cluster_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -383,7 +419,7 @@ func (x *SetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetResponse.ProtoReflect.Descriptor instead.
 func (*SetResponse) Descriptor() ([]byte, []int) {
-	return file_proto_cluster_proto_rawDescGZIP(), []int{6}
+	return file_proto_cluster_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *SetResponse) GetSuccess() bool {
@@ -396,14 +432,14 @@ func (x *SetResponse) GetSuccess() bool {
 type DeleteRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Hash          string                 `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
-	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	Keys          []string               `protobuf:"bytes,2,rep,name=keys,proto3" json:"keys,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeleteRequest) Reset() {
 	*x = DeleteRequest{}
-	mi := &file_proto_cluster_proto_msgTypes[7]
+	mi := &file_proto_cluster_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -415,7 +451,7 @@ func (x *DeleteRequest) String() string {
 func (*DeleteRequest) ProtoMessage() {}
 
 func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_cluster_proto_msgTypes[7]
+	mi := &file_proto_cluster_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -428,7 +464,7 @@ func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRequest.ProtoReflect.Descriptor instead.
 func (*DeleteRequest) Descriptor() ([]byte, []int) {
-	return file_proto_cluster_proto_rawDescGZIP(), []int{7}
+	return file_proto_cluster_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *DeleteRequest) GetHash() string {
@@ -438,11 +474,11 @@ func (x *DeleteRequest) GetHash() string {
 	return ""
 }
 
-func (x *DeleteRequest) GetKey() string {
+func (x *DeleteRequest) GetKeys() []string {
 	if x != nil {
-		return x.Key
+		return x.Keys
 	}
-	return ""
+	return nil
 }
 
 type DeleteResponse struct {
@@ -454,7 +490,7 @@ type DeleteResponse struct {
 
 func (x *DeleteResponse) Reset() {
 	*x = DeleteResponse{}
-	mi := &file_proto_cluster_proto_msgTypes[8]
+	mi := &file_proto_cluster_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -466,7 +502,7 @@ func (x *DeleteResponse) String() string {
 func (*DeleteResponse) ProtoMessage() {}
 
 func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_cluster_proto_msgTypes[8]
+	mi := &file_proto_cluster_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -479,7 +515,7 @@ func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteResponse.ProtoReflect.Descriptor instead.
 func (*DeleteResponse) Descriptor() ([]byte, []int) {
-	return file_proto_cluster_proto_rawDescGZIP(), []int{8}
+	return file_proto_cluster_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DeleteResponse) GetSuccess() bool {
@@ -498,39 +534,43 @@ const file_proto_cluster_proto_rawDesc = "" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x1b\n" +
 	"\tnode_addr\x18\x02 \x01(\tR\bnodeAddr\x12\x14\n" +
 	"\x05alive\x18\x03 \x01(\bR\x05alive\x12\x1b\n" +
-	"\tlast_seen\x18\x04 \x01(\x03R\blastSeen\"^\n" +
+	"\tlast_seen\x18\x04 \x01(\x03R\blastSeen\"-\n" +
+	"\x05Value\x12\x12\n" +
+	"\x04data\x18\x01 \x01(\fR\x04data\x12\x10\n" +
+	"\x03ttl\x18\x02 \x01(\x03R\x03ttl\"^\n" +
 	"\x10HeartbeatRequest\x12#\n" +
 	"\x04self\x18\x01 \x01(\v2\x0f.clusterpb.NodeR\x04self\x12%\n" +
 	"\x05peers\x18\x02 \x03(\v2\x0f.clusterpb.NodeR\x05peers\":\n" +
 	"\x11HeartbeatResponse\x12%\n" +
-	"\x05peers\x18\x01 \x03(\v2\x0f.clusterpb.NodeR\x05peers\"2\n" +
+	"\x05peers\x18\x01 \x03(\v2\x0f.clusterpb.NodeR\x05peers\"4\n" +
 	"\n" +
 	"GetRequest\x12\x12\n" +
-	"\x04hash\x18\x01 \x01(\tR\x04hash\x12\x10\n" +
-	"\x03key\x18\x02 \x01(\tR\x03key\"!\n" +
-	"\vGetResponse\x12\x12\n" +
-	"\x04data\x18\x01 \x01(\fR\x04data\"X\n" +
+	"\x04hash\x18\x01 \x01(\tR\x04hash\x12\x12\n" +
+	"\x04keys\x18\x02 \x03(\tR\x04keys\"\x96\x01\n" +
+	"\vGetResponse\x12:\n" +
+	"\x06values\x18\x01 \x03(\v2\".clusterpb.GetResponse.ValuesEntryR\x06values\x1aK\n" +
+	"\vValuesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12&\n" +
+	"\x05value\x18\x02 \x01(\v2\x10.clusterpb.ValueR\x05value:\x028\x01\"\xa8\x01\n" +
 	"\n" +
 	"SetRequest\x12\x12\n" +
-	"\x04hash\x18\x01 \x01(\tR\x04hash\x12\x10\n" +
-	"\x03key\x18\x02 \x01(\tR\x03key\x12\x12\n" +
-	"\x04data\x18\x03 \x01(\fR\x04data\x12\x10\n" +
-	"\x03ttl\x18\x04 \x01(\x03R\x03ttl\"'\n" +
+	"\x04hash\x18\x01 \x01(\tR\x04hash\x129\n" +
+	"\x06values\x18\x02 \x03(\v2!.clusterpb.SetRequest.ValuesEntryR\x06values\x1aK\n" +
+	"\vValuesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12&\n" +
+	"\x05value\x18\x02 \x01(\v2\x10.clusterpb.ValueR\x05value:\x028\x01\"'\n" +
 	"\vSetResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"5\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"7\n" +
 	"\rDeleteRequest\x12\x12\n" +
-	"\x04hash\x18\x01 \x01(\tR\x04hash\x12\x10\n" +
-	"\x03key\x18\x02 \x01(\tR\x03key\"*\n" +
+	"\x04hash\x18\x01 \x01(\tR\x04hash\x12\x12\n" +
+	"\x04keys\x18\x02 \x03(\tR\x04keys\"*\n" +
 	"\x0eDeleteResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess2\xc9\x03\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess2\x80\x02\n" +
 	"\vClusterNode\x12F\n" +
 	"\tHeartbeat\x12\x1b.clusterpb.HeartbeatRequest\x1a\x1c.clusterpb.HeartbeatResponse\x124\n" +
 	"\x03Get\x12\x15.clusterpb.GetRequest\x1a\x16.clusterpb.GetResponse\x124\n" +
 	"\x03Set\x12\x15.clusterpb.SetRequest\x1a\x16.clusterpb.SetResponse\x12=\n" +
-	"\x06Delete\x12\x18.clusterpb.DeleteRequest\x1a\x19.clusterpb.DeleteResponse\x12>\n" +
-	"\tStreamGet\x12\x15.clusterpb.GetRequest\x1a\x16.clusterpb.GetResponse(\x010\x01\x12>\n" +
-	"\tStreamSet\x12\x15.clusterpb.SetRequest\x1a\x16.clusterpb.SetResponse(\x010\x01\x12G\n" +
-	"\fStreamDelete\x12\x18.clusterpb.DeleteRequest\x1a\x19.clusterpb.DeleteResponse(\x010\x01B\rZ\v./clusterpbb\x06proto3"
+	"\x06Delete\x12\x18.clusterpb.DeleteRequest\x1a\x19.clusterpb.DeleteResponseB\rZ\v./clusterpbb\x06proto3"
 
 var (
 	file_proto_cluster_proto_rawDescOnce sync.Once
@@ -544,41 +584,42 @@ func file_proto_cluster_proto_rawDescGZIP() []byte {
 	return file_proto_cluster_proto_rawDescData
 }
 
-var file_proto_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_proto_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_proto_cluster_proto_goTypes = []any{
 	(*Node)(nil),              // 0: clusterpb.Node
-	(*HeartbeatRequest)(nil),  // 1: clusterpb.HeartbeatRequest
-	(*HeartbeatResponse)(nil), // 2: clusterpb.HeartbeatResponse
-	(*GetRequest)(nil),        // 3: clusterpb.GetRequest
-	(*GetResponse)(nil),       // 4: clusterpb.GetResponse
-	(*SetRequest)(nil),        // 5: clusterpb.SetRequest
-	(*SetResponse)(nil),       // 6: clusterpb.SetResponse
-	(*DeleteRequest)(nil),     // 7: clusterpb.DeleteRequest
-	(*DeleteResponse)(nil),    // 8: clusterpb.DeleteResponse
+	(*Value)(nil),             // 1: clusterpb.Value
+	(*HeartbeatRequest)(nil),  // 2: clusterpb.HeartbeatRequest
+	(*HeartbeatResponse)(nil), // 3: clusterpb.HeartbeatResponse
+	(*GetRequest)(nil),        // 4: clusterpb.GetRequest
+	(*GetResponse)(nil),       // 5: clusterpb.GetResponse
+	(*SetRequest)(nil),        // 6: clusterpb.SetRequest
+	(*SetResponse)(nil),       // 7: clusterpb.SetResponse
+	(*DeleteRequest)(nil),     // 8: clusterpb.DeleteRequest
+	(*DeleteResponse)(nil),    // 9: clusterpb.DeleteResponse
+	nil,                       // 10: clusterpb.GetResponse.ValuesEntry
+	nil,                       // 11: clusterpb.SetRequest.ValuesEntry
 }
 var file_proto_cluster_proto_depIdxs = []int32{
 	0,  // 0: clusterpb.HeartbeatRequest.self:type_name -> clusterpb.Node
 	0,  // 1: clusterpb.HeartbeatRequest.peers:type_name -> clusterpb.Node
 	0,  // 2: clusterpb.HeartbeatResponse.peers:type_name -> clusterpb.Node
-	1,  // 3: clusterpb.ClusterNode.Heartbeat:input_type -> clusterpb.HeartbeatRequest
-	3,  // 4: clusterpb.ClusterNode.Get:input_type -> clusterpb.GetRequest
-	5,  // 5: clusterpb.ClusterNode.Set:input_type -> clusterpb.SetRequest
-	7,  // 6: clusterpb.ClusterNode.Delete:input_type -> clusterpb.DeleteRequest
-	3,  // 7: clusterpb.ClusterNode.StreamGet:input_type -> clusterpb.GetRequest
-	5,  // 8: clusterpb.ClusterNode.StreamSet:input_type -> clusterpb.SetRequest
-	7,  // 9: clusterpb.ClusterNode.StreamDelete:input_type -> clusterpb.DeleteRequest
-	2,  // 10: clusterpb.ClusterNode.Heartbeat:output_type -> clusterpb.HeartbeatResponse
-	4,  // 11: clusterpb.ClusterNode.Get:output_type -> clusterpb.GetResponse
-	6,  // 12: clusterpb.ClusterNode.Set:output_type -> clusterpb.SetResponse
-	8,  // 13: clusterpb.ClusterNode.Delete:output_type -> clusterpb.DeleteResponse
-	4,  // 14: clusterpb.ClusterNode.StreamGet:output_type -> clusterpb.GetResponse
-	6,  // 15: clusterpb.ClusterNode.StreamSet:output_type -> clusterpb.SetResponse
-	8,  // 16: clusterpb.ClusterNode.StreamDelete:output_type -> clusterpb.DeleteResponse
-	10, // [10:17] is the sub-list for method output_type
-	3,  // [3:10] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+	10, // 3: clusterpb.GetResponse.values:type_name -> clusterpb.GetResponse.ValuesEntry
+	11, // 4: clusterpb.SetRequest.values:type_name -> clusterpb.SetRequest.ValuesEntry
+	1,  // 5: clusterpb.GetResponse.ValuesEntry.value:type_name -> clusterpb.Value
+	1,  // 6: clusterpb.SetRequest.ValuesEntry.value:type_name -> clusterpb.Value
+	2,  // 7: clusterpb.ClusterNode.Heartbeat:input_type -> clusterpb.HeartbeatRequest
+	4,  // 8: clusterpb.ClusterNode.Get:input_type -> clusterpb.GetRequest
+	6,  // 9: clusterpb.ClusterNode.Set:input_type -> clusterpb.SetRequest
+	8,  // 10: clusterpb.ClusterNode.Delete:input_type -> clusterpb.DeleteRequest
+	3,  // 11: clusterpb.ClusterNode.Heartbeat:output_type -> clusterpb.HeartbeatResponse
+	5,  // 12: clusterpb.ClusterNode.Get:output_type -> clusterpb.GetResponse
+	7,  // 13: clusterpb.ClusterNode.Set:output_type -> clusterpb.SetResponse
+	9,  // 14: clusterpb.ClusterNode.Delete:output_type -> clusterpb.DeleteResponse
+	11, // [11:15] is the sub-list for method output_type
+	7,  // [7:11] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_proto_cluster_proto_init() }
@@ -592,7 +633,7 @@ func file_proto_cluster_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_cluster_proto_rawDesc), len(file_proto_cluster_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

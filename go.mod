@@ -8,7 +8,6 @@ require (
 )
 
 require (
-	github.com/golang/geo v0.0.0-20250917161122-64cb148137c6
 	github.com/joho/godotenv v1.5.1
 	golang.org/x/net v0.41.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect

@@ -6,8 +6,14 @@ package clusterpb;
 
 service ClusterNode {
   rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  // Unary RPCs
   rpc Get(GetRequest) returns (GetResponse);
   rpc Set(SetRequest) returns (SetResponse);
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+  // Streaming RPCs for pipelining
+  rpc StreamGet(stream GetRequest) returns (stream GetResponse);
+  rpc StreamSet(stream SetRequest) returns (stream SetResponse);
+  rpc StreamDelete(stream DeleteRequest) returns (stream DeleteResponse);
 }
 
 message Node {
@@ -16,14 +22,6 @@ message Node {
   bool alive = 3;
   int64 last_seen = 4;
 }
-
-message PositionEntry {
-  string id = 1;
-  double lat = 2;
-  double lon = 3;
-  int64 timestamp = 4;
-}
-
 
 message HeartbeatRequest {
   Node self = 1;
@@ -35,19 +33,30 @@ message HeartbeatResponse {
 }
 
 message GetRequest {
-  string node_id = 1;
-  uint64 cell_id = 2;
+  string hash = 1;
+  string key = 2;
 }
 
 message GetResponse {
-  repeated PositionEntry positions = 1;
+  bytes data = 1;
 }
 
 message SetRequest {
-  string node_id = 1;
-  repeated PositionEntry positions = 3;
+  string hash = 1;
+  string key = 2;
+  bytes data = 3;
+  int64 ttl = 4;
 }
 
 message SetResponse {
+  bool success = 1;
+}
+
+message DeleteRequest {
+  string hash = 1;
+  string key = 2;
+}
+
+message DeleteResponse {
   bool success = 1;
 }

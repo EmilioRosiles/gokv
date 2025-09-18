@@ -2,36 +2,35 @@ package cluster
 
 import (
 	"context"
+	"io"
 	"log"
 	"math/rand/v2"
 	"sync"
 	"time"
 
-	"gokv/internal/cluster/hashring"
-	"gokv/internal/cluster/peer"
-	"gokv/internal/cluster/pool"
-	"gokv/internal/datastore"
-	position "gokv/internal/models"
+	"gokv/internal/hashmap"
+	"gokv/internal/hashring"
+	"gokv/internal/models/peer"
+	"gokv/internal/pool"
 	clusterpb "gokv/proto"
 
-	"github.com/golang/geo/s2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 // ClusterManager: Contains the node info, list of peers, the data store, and the hash ring.
 type ClusterManager struct {
-	Mu        sync.RWMutex
-	NodeID    string                                                          // Id of current node
-	NodeAddr  string                                                          // Address of the current node
-	PeerMap   map[string]*peer.Peer                                           // Map of nodes in the cluster
-	HashRing  *hashring.HashRing                                              // Consitent Hashing implementation
-	ConnPool  *pool.GrpcConnectionPool                                        // Connection pool of nodes in the cluster
-	Datastore *datastore.Datastore[s2.CellID, string, position.PositionEntry] // Data structures
+	Mu       sync.RWMutex
+	NodeID   string                                   // Id of current node
+	NodeAddr string                                   // Address of the current node
+	PeerMap  map[string]*peer.Peer                    // Map of nodes in the cluster
+	HashRing *hashring.HashRing                       // Consitent Hashing implementation
+	ConnPool *pool.GrpcConnectionPool                 // Connection pool of nodes in the cluster
+	HashMap  *hashmap.HashMap[string, string, []byte] // Data structures
 }
 
 // NewClusterManager creates a new cluster manager.
-func NewClusterManager(nodeID string, nodeAddress string, vNodeCount int) *ClusterManager {
+func NewClusterManager(nodeID string, nodeAddress string, vNodeCount int, cleanupInterval time.Duration) *ClusterManager {
 	cm := &ClusterManager{
 		NodeID:   nodeID,
 		NodeAddr: nodeAddress,
@@ -45,7 +44,7 @@ func NewClusterManager(nodeID string, nodeAddress string, vNodeCount int) *Clust
 				}),
 			)
 		}),
-		Datastore: datastore.NewDatastore[s2.CellID, string, position.PositionEntry](10 * time.Second),
+		HashMap: hashmap.NewHashMap[string, string, []byte](10 * time.Second),
 	}
 
 	cm.HashRing.Add(cm.NodeID)
@@ -121,8 +120,8 @@ func (cm *ClusterManager) GetPeerClient(nodeID string) (clusterpb.ClusterNodeCli
 }
 
 // Gets the ID of the node responsible for a s2 cell
-func (cm *ClusterManager) GetResponsibleNode(key s2.CellID) string {
-	return cm.HashRing.Get(key.String())
+func (cm *ClusterManager) GetResponsibleNode(key string) string {
+	return cm.HashRing.Get(key)
 }
 
 // Returns count of peers alive
@@ -194,7 +193,6 @@ func (cm *ClusterManager) Heartbeat(peerList ...*peer.Peer) {
 			log.Printf("Heartbeat failed for peer %s: Client not found. Removing from cluster.", peerToCheck.NodeID)
 			cm.RemoveNode(peerToCheck.NodeID)
 			continue
-
 		}
 
 		self := &clusterpb.Node{NodeId: cm.NodeID, NodeAddr: cm.NodeAddr, Alive: true, LastSeen: time.Now().Unix()}
@@ -257,108 +255,137 @@ func (cm *ClusterManager) MergeState(nodes []*clusterpb.Node) {
 
 // Rebalances cluster keys when a new node is added
 func (cm *ClusterManager) Rebalance() {
-	cellIDs := cm.Datastore.HScan()
-	positionMap := make(map[string][]position.PositionEntry)
+	hashes := cm.HashMap.HScan()
 
-	for _, cellID := range cellIDs {
-		responsibleNodeID := cm.GetResponsibleNode(cellID)
+	for _, hash := range hashes {
+		responsibleNodeID := cm.GetResponsibleNode(hash)
 		if responsibleNodeID != cm.NodeID {
-			nodeID := responsibleNodeID
-			positions := cm.Datastore.HGetAll(cellID)
-			positionMap[nodeID] = append(positionMap[nodeID], positions...)
-		}
-	}
+			entries := cm.HashMap.HGetAll(hash)
+			log.Printf("Rebalancing %v keys from hash %s to peer %s.", len(entries), hash, responsibleNodeID)
+			client, ok := cm.GetPeerClient(responsibleNodeID)
+			if !ok {
+				log.Printf("Rebalance failed for peer %s: Client not found.", responsibleNodeID)
+				continue
+			}
+			stream, _ := client.StreamSet(context.Background())
 
-	for nodeID, positions := range positionMap {
-		log.Printf("Rebalancing %v positions to peer %s.", len(positions), nodeID)
-		client, ok := cm.GetPeerClient(nodeID)
-		if !ok {
-			log.Printf("Rebalance failed for peer %s: Client not found.", nodeID)
-			continue
+			go func() {
+				for key, entry := range entries {
+					req := &clusterpb.SetRequest{
+						Hash: hash,
+						Key:  key,
+						Data: entry.Data,
+						Ttl:  time.Now().Unix() - entry.ExpiresAt,
+					}
+
+					if err := stream.Send(req); err != nil {
+						log.Fatalf("Send error: %v", err)
+					}
+				}
+				stream.CloseSend()
+			}()
+
+			for {
+				_, err := stream.Recv()
+				if err == io.EOF {
+					break
+				}
+			}
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		req := &clusterpb.SetRequest{
-			NodeId:    cm.NodeID,
-			Positions: position.ToProtoList(positions),
-		}
-		_, err := client.Set(ctx, req)
-		if err != nil {
-			log.Printf("Rebalance failed for peer %s: %v. Removing from cluster.", nodeID, err)
-			cm.RemoveNode(nodeID)
-		}
-		cancel()
 	}
 }
 
-func (cm *ClusterManager) GetPositions(cellID s2.CellID) []position.PositionEntry {
-	responsibleNodeID := cm.GetResponsibleNode(cellID)
+// Stores key from the cluster
+func (cm *ClusterManager) Get(hash string, key string) []byte {
+	responsibleNodeID := cm.GetResponsibleNode(hash)
 	if responsibleNodeID != cm.NodeID {
 		client, ok := cm.GetPeerClient(responsibleNodeID)
 		if !ok {
 			log.Printf("Get failed for peer %s: Client not found. Removing from cluster.", responsibleNodeID)
 			cm.RemoveNode(responsibleNodeID)
-			log.Printf("Attempting to get position from cluster again.")
-			return cm.GetPositions(cellID)
+			log.Printf("Attempting to get key from cluster again.")
+			return cm.Get(hash, key)
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
 
 		req := &clusterpb.GetRequest{
-			NodeId: cm.NodeID,
-			CellId: uint64(cellID),
+			Hash: hash,
+			Key:  key,
 		}
 
-		res, err := client.Get(ctx, req)
+		res, err := client.Get(context.Background(), req)
 		if err != nil {
 			log.Printf("Get failed for peer %s: %v. Removing from cluster.", responsibleNodeID, err)
 			cm.RemoveNode(responsibleNodeID)
-			log.Printf("Attempting to get position from cluster again.")
-			return cm.GetPositions(cellID)
+			log.Printf("Attempting to get key from cluster again.")
+			return cm.Get(hash, key)
 		}
-		return position.FromProtoList(res.Positions)
+		return res.Data
 	} else {
-		return cm.Datastore.HGetAll(cellID)
+		data, _, _ := cm.HashMap.HGet(hash, key)
+		return data
 	}
 }
 
-// Stores positions in the cluster
-func (cm *ClusterManager) SetPositions(positions []position.PositionEntry) {
-	peerMap := make(map[string][]position.PositionEntry)
-	log.Printf("Inserting %d positions in cluster.", len(positions))
-	localCount := 0
-	isCluster := cm.AlivePeers() > 0
+// Stores key in the cluster
+func (cm *ClusterManager) Set(hash string, key string, value []byte, ttl time.Duration) {
+	log.Printf("Inserting %s/%s in cluster.", hash, key)
 
-	for _, pos := range positions {
-		latLng := s2.LatLngFromDegrees(pos.Lat, pos.Lon)
-		cellID := s2.CellIDFromLatLng(latLng).Parent(12)
-		responsibleNodeID := cm.GetResponsibleNode(cellID)
-		if isCluster && responsibleNodeID != cm.NodeID {
-			peerMap[responsibleNodeID] = append(peerMap[responsibleNodeID], pos)
-		} else {
-			cm.Datastore.HSet(cellID, pos.ID, pos, 5*time.Second)
-			localCount++
+	responsibleNodeID := cm.GetResponsibleNode(hash)
+	if responsibleNodeID != cm.NodeID {
+		client, ok := cm.GetPeerClient(responsibleNodeID)
+		if !ok {
+			log.Printf("Set failed for peer %s: Client not found. Removing from cluster.", responsibleNodeID)
+			cm.RemoveNode(responsibleNodeID)
+			log.Printf("Attempting to insert key in cluster again.")
+			cm.Set(hash, key, value, ttl)
 		}
-	}
 
-	log.Printf("Processed and stored %d positions locally.", localCount)
-
-	for nodeID, positions := range peerMap {
-		client, _ := cm.GetPeerClient(nodeID)
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		req := &clusterpb.SetRequest{
-			NodeId:    cm.NodeID,
-			Positions: position.ToProtoList(positions),
+			Hash: hash,
+			Key:  key,
+			Data: value,
+			Ttl:  ttl.Nanoseconds(),
 		}
 
-		log.Printf("Redirecting %d positions to peer: %s.", len(positions), nodeID)
-		_, err := client.Set(ctx, req)
-
+		log.Printf("Redirecting %s/%s to peer: %s.", hash, key, responsibleNodeID)
+		_, err := client.Set(context.Background(), req)
 		if err != nil {
-			log.Printf("Set failed for peer %s: %v. Removing from cluster.", nodeID, err)
-			cm.RemoveNode(nodeID)
-			log.Printf("Attempting to insert %d position in cluster again.", len(positions))
-			cm.SetPositions(positions)
+			log.Printf("Set failed for peer %s: %v. Removing from cluster.", responsibleNodeID, err)
+			cm.RemoveNode(responsibleNodeID)
+			log.Printf("Attempting to insert in cluster again.")
+			cm.Set(hash, key, value, ttl)
 		}
-		cancel()
+	} else {
+		cm.HashMap.HSet(hash, key, value, ttl)
+	}
+}
+
+// Deletes key from cluster
+func (cm *ClusterManager) Delete(hash string, key string) {
+	responsibleNodeID := cm.GetResponsibleNode(hash)
+	if responsibleNodeID != cm.NodeID {
+		client, ok := cm.GetPeerClient(responsibleNodeID)
+		if !ok {
+			log.Printf("Delete failed for peer %s: Client not found. Removing from cluster.", responsibleNodeID)
+			cm.RemoveNode(responsibleNodeID)
+			log.Printf("Attempting to delete key from cluster again.")
+			cm.Delete(hash, key)
+			return
+		}
+
+		req := &clusterpb.DeleteRequest{
+			Hash: hash,
+			Key:  key,
+		}
+
+		_, err := client.Delete(context.Background(), req)
+		if err != nil {
+			log.Printf("Delete failed for peer %s: %v. Removing from cluster.", responsibleNodeID, err)
+			cm.RemoveNode(responsibleNodeID)
+			log.Printf("Attempting to delete key from cluster again.")
+			cm.Delete(hash, key)
+		}
+	} else {
+		cm.HashMap.HDel(hash, key)
 	}
 }

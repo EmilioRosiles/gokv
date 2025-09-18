@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"gokv/internal/cluster"
 	"gokv/internal/grpc"
@@ -21,7 +22,7 @@ func main() {
 	SEED_NODE_ID := os.Getenv("SEED_NODE_ID")
 	SEED_NODE_ADDR := os.Getenv("SEED_NODE_ADDR")
 
-	cm := cluster.NewClusterManager(NODE_ID, HOST+":"+GRPC_PORT, 3)
+	cm := cluster.NewClusterManager(NODE_ID, HOST+":"+GRPC_PORT, 3, 10*time.Second)
 	go grpc.StartGrpcServer(HOST, GRPC_PORT, cm)
 
 	if SEED_NODE_ID != "" && SEED_NODE_ADDR != "" {
@@ -31,11 +32,11 @@ func main() {
 		}
 	}
 
-	cm.StartHeartbeat()
+	go cm.StartHeartbeat()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 
 	<-stop
-	log.Println("Shutting down servers...")
+	log.Println("Shutting down node...")
 }
