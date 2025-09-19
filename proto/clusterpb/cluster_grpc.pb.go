@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ClusterNode_Heartbeat_FullMethodName  = "/clusterpb.ClusterNode/Heartbeat"
-	ClusterNode_RunCommand_FullMethodName = "/clusterpb.ClusterNode/RunCommand"
+	ClusterNode_Heartbeat_FullMethodName     = "/clusterpb.ClusterNode/Heartbeat"
+	ClusterNode_RunCommand_FullMethodName    = "/clusterpb.ClusterNode/RunCommand"
+	ClusterNode_StreamCommand_FullMethodName = "/clusterpb.ClusterNode/StreamCommand"
 )
 
 // ClusterNodeClient is the client API for ClusterNode service.
@@ -29,6 +30,7 @@ const (
 type ClusterNodeClient interface {
 	Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error)
 	RunCommand(ctx context.Context, in *CommandRequest, opts ...grpc.CallOption) (*CommandResponse, error)
+	StreamCommand(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[CommandRequest, CommandResponse], error)
 }
 
 type clusterNodeClient struct {
@@ -59,12 +61,26 @@ func (c *clusterNodeClient) RunCommand(ctx context.Context, in *CommandRequest, 
 	return out, nil
 }
 
+func (c *clusterNodeClient) StreamCommand(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[CommandRequest, CommandResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &ClusterNode_ServiceDesc.Streams[0], ClusterNode_StreamCommand_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[CommandRequest, CommandResponse]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ClusterNode_StreamCommandClient = grpc.BidiStreamingClient[CommandRequest, CommandResponse]
+
 // ClusterNodeServer is the server API for ClusterNode service.
 // All implementations must embed UnimplementedClusterNodeServer
 // for forward compatibility.
 type ClusterNodeServer interface {
 	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
 	RunCommand(context.Context, *CommandRequest) (*CommandResponse, error)
+	StreamCommand(grpc.BidiStreamingServer[CommandRequest, CommandResponse]) error
 	mustEmbedUnimplementedClusterNodeServer()
 }
 
@@ -80,6 +96,9 @@ func (UnimplementedClusterNodeServer) Heartbeat(context.Context, *HeartbeatReque
 }
 func (UnimplementedClusterNodeServer) RunCommand(context.Context, *CommandRequest) (*CommandResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunCommand not implemented")
+}
+func (UnimplementedClusterNodeServer) StreamCommand(grpc.BidiStreamingServer[CommandRequest, CommandResponse]) error {
+	return status.Errorf(codes.Unimplemented, "method StreamCommand not implemented")
 }
 func (UnimplementedClusterNodeServer) mustEmbedUnimplementedClusterNodeServer() {}
 func (UnimplementedClusterNodeServer) testEmbeddedByValue()                     {}
@@ -138,6 +157,13 @@ func _ClusterNode_RunCommand_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ClusterNode_StreamCommand_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ClusterNodeServer).StreamCommand(&grpc.GenericServerStream[CommandRequest, CommandResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ClusterNode_StreamCommandServer = grpc.BidiStreamingServer[CommandRequest, CommandResponse]
+
 // ClusterNode_ServiceDesc is the grpc.ServiceDesc for ClusterNode service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -154,6 +180,13 @@ var ClusterNode_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ClusterNode_RunCommand_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "StreamCommand",
+			Handler:       _ClusterNode_StreamCommand_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "proto/clusterpb/cluster.proto",
 }

@@ -14,29 +14,28 @@ import (
 
 // fieldEntry represents an individual field in a hash, with its own TTL.
 type fieldEntry struct {
-	Data      []byte
-	ExpiresAt int64
+	Data      []byte // The data of the field.
+	ExpiresAt int64  // The expiration time of the field in Unix nanoseconds.
 }
 
 // hashEntry represents a hash with its own mutex and map of fields.
 type hashEntry struct {
 	mu    sync.RWMutex
-	items map[string]*fieldEntry
+	items map[string]*fieldEntry // The map of fields in the hash.
 }
 
-// HashMap is a thread-safe, in-memory key-value store.
-// It supports field-level TTLs.
+// HashMap is a thread-safe, in-memory key-value store that supports field-level TTLs.
 type HashMap struct {
 	mu      sync.RWMutex
-	hashes  map[string]*hashEntry
-	janitor *janitor
+	hashes  map[string]*hashEntry // The map of hashes.
+	janitor *janitor              // The janitor for cleaning up expired items.
 }
 
 // HGet retrieves a field from a hash.
-// It returns the data and true if the field exists and has not expired.
+// It returns the data if the field exists and has not expired.
 func (c *HashMap) HGet(hash string, args ...[]byte) (any, error) {
 	if len(args) != 1 {
-		return nil, errors.New("HGET requires 1 argument: key")
+		return nil, errors.New("hget: requires 1 argument: key")
 	}
 	key := string(args[0])
 
@@ -45,7 +44,7 @@ func (c *HashMap) HGet(hash string, args ...[]byte) (any, error) {
 	c.mu.RUnlock()
 
 	if !ok {
-		return nil, errors.New("HGET hash not found")
+		return nil, errors.New("hget: hash not found")
 	}
 
 	he.mu.RLock()
@@ -53,7 +52,7 @@ func (c *HashMap) HGet(hash string, args ...[]byte) (any, error) {
 	he.mu.RUnlock()
 
 	if !ok || entry.ExpiresAt > 0 && time.Now().UnixNano() > entry.ExpiresAt {
-		return nil, errors.New("HGET key not found")
+		return nil, errors.New("hget: key not found")
 	}
 
 	return entry.Data, nil
@@ -64,7 +63,7 @@ func (c *HashMap) HGet(hash string, args ...[]byte) (any, error) {
 // If ttl is 0, the field will not expire.
 func (c *HashMap) HSet(hash string, args ...[]byte) (any, error) {
 	if len(args) < 2 || len(args) > 3 {
-		return nil, errors.New("HSET requires 2 or 3 arguments: field, value[, ttl]")
+		return nil, errors.New("hset: requires 2 or 3 arguments: field, value[, ttl]")
 	}
 	key := string(args[0])
 	data := args[1]
@@ -73,7 +72,7 @@ func (c *HashMap) HSet(hash string, args ...[]byte) (any, error) {
 		var err error
 		ttl, err := strconv.ParseInt(string(args[2]), 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("HSET invalid TTL: %w", err)
+			return nil, fmt.Errorf("hset: invalid TTL: %w", err)
 		}
 		if ttl > 0 {
 			expiresAt = time.Now().Unix() + ttl
@@ -112,7 +111,7 @@ func (c *HashMap) HDel(hash string, args ...[]byte) (any, error) {
 		return int64(0), nil
 	}
 
-	// If no args, delete the whole hash
+	// If no args, delete the whole hash.
 	if len(args) == 0 {
 		c.mu.Lock()
 		delete(c.hashes, hash)
@@ -120,7 +119,7 @@ func (c *HashMap) HDel(hash string, args ...[]byte) (any, error) {
 		return int64(1), nil
 	}
 
-	// Otherwise, delete specified keys
+	// Otherwise, delete specified keys.
 	deletedCount := 0
 	he.mu.Lock()
 	for _, keyBytes := range args {
@@ -145,7 +144,7 @@ func (c *HashMap) HDel(hash string, args ...[]byte) (any, error) {
 // HGetAll retrieves all fields and values from a hash.
 func (c *HashMap) HGetAll(hash string, args ...[]byte) (any, error) {
 	if len(args) != 0 {
-		return nil, errors.New("HGETALL does not take any arguments")
+		return nil, errors.New("hgetall: does not take any arguments")
 	}
 
 	c.mu.RLock()
@@ -173,13 +172,31 @@ func (c *HashMap) HGetAll(hash string, args ...[]byte) (any, error) {
 	return kvList, nil
 }
 
-// Janitor struct to hold cleanup properties.
-type janitor struct {
-	Interval time.Duration
-	stop     chan bool
+// GetAllData returns all the data in the hashmap.
+func (c *HashMap) GetAllData() map[string]map[string]*fieldEntry {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	data := make(map[string]map[string]*fieldEntry)
+	for hash, he := range c.hashes {
+		data[hash] = make(map[string]*fieldEntry)
+		he.mu.RLock()
+		for key, entry := range he.items {
+			data[hash][key] = entry
+		}
+		he.mu.RUnlock()
+	}
+
+	return data
 }
 
-// runJanitor starts a goroutine that periodically cleans up expired items.
+// janitor manages the cleanup of expired items in the HashMap.
+type janitor struct {
+	Interval time.Duration // The interval at which to run the cleanup.
+	stop     chan bool     // A channel to stop the janitor.
+}
+
+// run starts a goroutine that periodically cleans up expired items.
 func (j *janitor) run(c *HashMap) {
 	ticker := time.NewTicker(j.Interval)
 	for {
@@ -218,7 +235,7 @@ func stopJanitor(c *HashMap) {
 	c.janitor.stop <- true
 }
 
-// NewHashMap creates a new cache with a background cleanup goroutine.
+// NewHashMap creates a new HashMap with a background cleanup goroutine.
 // The cleanupInterval determines how often the janitor checks for expired items.
 func NewHashMap(cr *command.CommandRegistry, cleanupInterval time.Duration) *HashMap {
 	c := &HashMap{
@@ -235,7 +252,7 @@ func NewHashMap(cr *command.CommandRegistry, cleanupInterval time.Duration) *Has
 		runtime.SetFinalizer(c, stopJanitor)
 	}
 
-	// Register HashMap commands
+	// Register HashMap commands.
 	cr.Register("HGET", c.HGet)
 	cr.Register("HSET", c.HSet)
 	cr.Register("HDEL", c.HDel)

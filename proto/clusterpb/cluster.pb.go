@@ -560,11 +560,12 @@ const file_proto_clusterpb_cluster_proto_rawDesc = "" +
 	"\x04list\x18\x05 \x01(\v2\x17.clusterpb.KeyValueListH\x00R\x04list\x12*\n" +
 	"\x03map\x18\x06 \x01(\v2\x16.clusterpb.KeyValueMapH\x00R\x03mapB\n" +
 	"\n" +
-	"\bresponse2\x9a\x01\n" +
+	"\bresponse2\xe6\x01\n" +
 	"\vClusterNode\x12F\n" +
 	"\tHeartbeat\x12\x1b.clusterpb.HeartbeatRequest\x1a\x1c.clusterpb.HeartbeatResponse\x12C\n" +
 	"\n" +
-	"RunCommand\x12\x19.clusterpb.CommandRequest\x1a\x1a.clusterpb.CommandResponseB\rZ\v./clusterpbb\x06proto3"
+	"RunCommand\x12\x19.clusterpb.CommandRequest\x1a\x1a.clusterpb.CommandResponse\x12J\n" +
+	"\rStreamCommand\x12\x19.clusterpb.CommandRequest\x1a\x1a.clusterpb.CommandResponse(\x010\x01B\rZ\v./clusterpbb\x06proto3"
 
 var (
 	file_proto_clusterpb_cluster_proto_rawDescOnce sync.Once
@@ -601,10 +602,12 @@ var file_proto_clusterpb_cluster_proto_depIdxs = []int32{
 	4,  // 7: clusterpb.KeyValueMap.MapEntry.value:type_name -> clusterpb.KeyValueList
 	1,  // 8: clusterpb.ClusterNode.Heartbeat:input_type -> clusterpb.HeartbeatRequest
 	6,  // 9: clusterpb.ClusterNode.RunCommand:input_type -> clusterpb.CommandRequest
-	2,  // 10: clusterpb.ClusterNode.Heartbeat:output_type -> clusterpb.HeartbeatResponse
-	7,  // 11: clusterpb.ClusterNode.RunCommand:output_type -> clusterpb.CommandResponse
-	10, // [10:12] is the sub-list for method output_type
-	8,  // [8:10] is the sub-list for method input_type
+	6,  // 10: clusterpb.ClusterNode.StreamCommand:input_type -> clusterpb.CommandRequest
+	2,  // 11: clusterpb.ClusterNode.Heartbeat:output_type -> clusterpb.HeartbeatResponse
+	7,  // 12: clusterpb.ClusterNode.RunCommand:output_type -> clusterpb.CommandResponse
+	7,  // 13: clusterpb.ClusterNode.StreamCommand:output_type -> clusterpb.CommandResponse
+	11, // [11:14] is the sub-list for method output_type
+	8,  // [8:11] is the sub-list for method input_type
 	8,  // [8:8] is the sub-list for extension type_name
 	8,  // [8:8] is the sub-list for extension extendee
 	0,  // [0:8] is the sub-list for field type_name

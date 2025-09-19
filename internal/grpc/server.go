@@ -13,28 +13,33 @@ import (
 	"google.golang.org/grpc"
 )
 
+// clusterNodeServer is the implementation of the ClusterNode gRPC server.
+// It holds a reference to the ClusterManager to access cluster-related functionality.
 type clusterNodeServer struct {
 	clusterpb.UnimplementedClusterNodeServer
 	cm *cluster.ClusterManager
 }
 
+// StartGrpcServer starts the gRPC server on the specified host and port.
+// It registers the clusterNodeServer implementation with the gRPC server.
 func StartGrpcServer(host string, port string, cm *cluster.ClusterManager) {
 	lis, err := net.Listen("tcp", host+":"+port)
 	if err != nil {
-		log.Fatalf("could not start gRPC server: %v", err)
+		log.Fatalf("gRPC server: could not start listening: %v", err)
 		return
 	}
 
 	grpcServer := grpc.NewServer()
 	serverImplementation := &clusterNodeServer{cm: cm}
 	clusterpb.RegisterClusterNodeServer(grpcServer, serverImplementation)
-	log.Printf("Starting gRPC server on: %s\n", host+":"+port)
+	log.Printf("gRPC server: starting on %s:%s", host, port)
 	grpcServer.Serve(lis)
 }
 
-// Heartbeat gRPC message handler
+// Heartbeat handles incoming heartbeat requests from other nodes in the cluster.
+// It merges the state of the incoming node and its peers with the current node's state.
 func (s *clusterNodeServer) Heartbeat(ctx context.Context, req *clusterpb.HeartbeatRequest) (*clusterpb.HeartbeatResponse, error) {
-	log.Printf("Received heartbeat from node %s", req.Self.NodeId)
+	log.Printf("gRPC server: received heartbeat from node %s", req.Self.NodeId)
 	s.cm.MergeState(append(req.Peers, req.Self))
 
 	s.cm.Mu.RLock()
@@ -46,9 +51,10 @@ func (s *clusterNodeServer) Heartbeat(ctx context.Context, req *clusterpb.Heartb
 	return &clusterpb.HeartbeatResponse{Peers: peerspb}, nil
 }
 
-// RunCommand gRPC message handler
+// RunCommand handles incoming command requests from other nodes in the cluster.
+// It executes the command using the ClusterManager and returns the result.
 func (s *clusterNodeServer) RunCommand(ctx context.Context, req *clusterpb.CommandRequest) (*clusterpb.CommandResponse, error) {
-	log.Printf("Received command %s for key %s", req.Command, req.Key)
+	log.Printf("gRPC server: received command '%s' for key '%s'", req.Command, req.Key)
 	data, err := s.cm.RunCommand(req.Command, req.Key, req.Args...)
 	if err != nil {
 		return &clusterpb.CommandResponse{Error: err.Error()}, nil
@@ -60,4 +66,34 @@ func (s *clusterNodeServer) RunCommand(ctx context.Context, req *clusterpb.Comma
 	}
 
 	return resp, nil
+}
+
+// StreamCommand handles incoming streaming command requests from other nodes in the cluster.
+// It receives a stream of commands, executes them, and sends back a stream of responses.
+func (s *clusterNodeServer) StreamCommand(stream clusterpb.ClusterNode_StreamCommandServer) error {
+	for {
+		req, err := stream.Recv()
+		if err != nil {
+			log.Printf("gRPC server: error receiving from stream: %v", err)
+			return err
+		}
+
+		log.Printf("gRPC server: received stream command '%s' for key '%s'", req.Command, req.Key)
+		data, err := s.cm.RunCommand(req.Command, req.Key, req.Args...)
+		if err != nil {
+			log.Printf("gRPC server: error running stream command: %v", err)
+			return err
+		}
+
+		resp, err := response.Marshal(data)
+		if err != nil {
+			log.Printf("gRPC server: error marshalling stream response: %v", err)
+			return err
+		}
+
+		if err := stream.Send(resp); err != nil {
+			log.Printf("gRPC server: error sending to stream: %v", err)
+			return err
+		}
+	}
 }

@@ -7,6 +7,7 @@ package clusterpb;
 service ClusterNode {
   rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
   rpc RunCommand(CommandRequest) returns (CommandResponse);
+  rpc StreamCommand(stream CommandRequest) returns (stream CommandResponse);
 }
 
 message Node {
@@ -43,7 +44,6 @@ message CommandRequest {
   string key = 2;
   repeated bytes args = 3;
 }
-
 
 message CommandResponse {
   string error = 1;

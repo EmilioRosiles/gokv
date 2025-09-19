@@ -19,19 +19,19 @@ import (
 	"google.golang.org/grpc"
 )
 
-// ClusterManager: Contains the node info, list of peers, the data store, and the hash ring.
+// ClusterManager manages the cluster state, including node information, peer list, data store, and hash ring.
 type ClusterManager struct {
 	Mu              sync.RWMutex
-	NodeID          string                   // Id of current node
-	NodeAddr        string                   // Address of the current node
-	PeerMap         map[string]*peer.Peer    // Map of nodes in the cluster
-	HashRing        *hashring.HashRing       // Consitent Hashing implementation
-	ConnPool        *pool.GrpcConnectionPool // Connection pool of nodes in the cluster
-	HashMap         *hashmap.HashMap         // Data structures
-	CommandRegistry *command.CommandRegistry // Registry for commands
+	NodeID          string                   // ID of the current node.
+	NodeAddr        string                   // Address of the current node.
+	PeerMap         map[string]*peer.Peer    // Map of nodes in the cluster.
+	HashRing        *hashring.HashRing       // Consistent hashing implementation.
+	ConnPool        *pool.GrpcConnectionPool // Connection pool for gRPC clients.
+	HashMap         *hashmap.HashMap         // In-memory data store.
+	CommandRegistry *command.CommandRegistry // Registry for supported commands.
 }
 
-// NewClusterManager creates a new cluster manager.
+// NewClusterManager creates and initializes a new ClusterManager.
 func NewClusterManager(nodeID string, nodeAddress string, vNodeCount int, cleanupInterval time.Duration) *ClusterManager {
 	registry := command.NewCommandRegistry()
 	hashMap := hashmap.NewHashMap(registry, 10*time.Second)
@@ -54,16 +54,17 @@ func NewClusterManager(nodeID string, nodeAddress string, vNodeCount int, cleanu
 	}
 
 	cm.HashRing.Add(cm.NodeID)
-	log.Printf("Created cluster manager")
+	log.Printf("cluster manager: created cluster manager for node %s", cm.NodeID)
 	return cm
 }
 
-// AddNode connects to a new node and adds it to the peer list and hash ring if the connection succeeds.
+// AddNode adds a new node to the cluster.
+// It establishes a connection and, if successful, adds the node to the peer list and hash ring.
 func (cm *ClusterManager) AddNode(nodeID string, addr string) {
 	cm.Mu.Lock()
 	defer cm.Mu.Unlock()
 
-	// Don't add self
+	// Don't add self.
 	if addr == cm.NodeAddr {
 		return
 	}
@@ -77,19 +78,20 @@ func (cm *ClusterManager) AddNode(nodeID string, addr string) {
 	_, err := cm.ConnPool.Get(addr)
 
 	if err != nil {
-		log.Printf("Failed to connect to node %s: %v", nodeID, err)
+		log.Printf("cluster manager: failed to connect to node %s: %v", nodeID, err)
 		localNode.Alive = false
 	} else {
-		log.Printf("Added new peer to cluster: %s", nodeID)
+		log.Printf("cluster manager: added new peer to cluster: %s", nodeID)
 		localNode.Alive = true
 		cm.HashRing.Add(nodeID)
-		// go cm.Rebalance()
+		go cm.Rebalance()
 	}
 
 	cm.PeerMap[nodeID] = localNode
 }
 
-// RemoveNode closes the connection, removes a node from hash ring, and sets alive prop to false.
+// RemoveNode removes a node from the cluster.
+// It closes the connection, removes the node from the hash ring, and marks it as not alive.
 func (cm *ClusterManager) RemoveNode(nodeID string) {
 	cm.Mu.Lock()
 	defer cm.Mu.Unlock()
@@ -98,11 +100,11 @@ func (cm *ClusterManager) RemoveNode(nodeID string) {
 		cm.ConnPool.Close(peer.NodeAddr)
 		cm.PeerMap[nodeID].Alive = false
 		cm.HashRing.Remove(nodeID)
-		log.Printf("Removed peer from cluster: %s", nodeID)
+		log.Printf("cluster manager: removed peer from cluster: %s", nodeID)
 	}
 }
 
-// Gets a peer ref by nodeID
+// GetPeer returns a peer by its node ID.
 func (cm *ClusterManager) GetPeer(nodeID string) (*peer.Peer, bool) {
 	cm.Mu.RLock()
 	defer cm.Mu.RUnlock()
@@ -110,7 +112,7 @@ func (cm *ClusterManager) GetPeer(nodeID string) (*peer.Peer, bool) {
 	return peer, ok
 }
 
-// Gets a peer gRPC client by nodeID
+// GetPeerClient returns a gRPC client for a given peer ID.
 func (cm *ClusterManager) GetPeerClient(nodeID string) (clusterpb.ClusterNodeClient, bool) {
 	peer, ok := cm.GetPeer(nodeID)
 	if !ok {
@@ -125,12 +127,12 @@ func (cm *ClusterManager) GetPeerClient(nodeID string) (clusterpb.ClusterNodeCli
 	return clusterpb.NewClusterNodeClient(conn), true
 }
 
-// Gets the ID of the node responsible for a s2 cell
+// GetResponsibleNode returns the ID of the node responsible for a given key.
 func (cm *ClusterManager) GetResponsibleNode(key string) string {
 	return cm.HashRing.Get(key)
 }
 
-// Returns count of peers alive
+// AlivePeers returns the number of alive peers in the cluster.
 func (cm *ClusterManager) AlivePeers() int {
 	cm.Mu.RLock()
 	defer cm.Mu.RUnlock()
@@ -144,7 +146,7 @@ func (cm *ClusterManager) AlivePeers() int {
 	return alivePeers
 }
 
-// Gets slice of ramdom n alive peers
+// GetRandomAlivePeers returns a slice of n random alive peers.
 func (cm *ClusterManager) GetRandomAlivePeers(num int) []*peer.Peer {
 	cm.Mu.RLock()
 	defer cm.Mu.RUnlock()
@@ -171,32 +173,32 @@ func (cm *ClusterManager) GetRandomAlivePeers(num int) []*peer.Peer {
 	return alivePeers[:num]
 }
 
-// Notifies cluster of precense and starts gossip protocol
+// StartHeartbeat starts the heartbeat process to periodically send heartbeats to other nodes.
 func (cm *ClusterManager) StartHeartbeat() {
-	ticker := time.NewTicker(5 * time.Second) // Set here Heartbeat interval
+	ticker := time.NewTicker(5 * time.Second) // Heartbeat interval.
 	defer ticker.Stop()
 
 	allPeers := cm.GetRandomAlivePeers(cm.AlivePeers())
 	cm.Heartbeat(allPeers...)
 
 	for range ticker.C {
-		gossipTargets := cm.GetRandomAlivePeers(2) // Set here Peer count for gossip protocol
+		gossipTargets := cm.GetRandomAlivePeers(2) // Number of peers to gossip with.
 		go cm.Heartbeat(gossipTargets...)
 	}
 }
 
-// Sends a heartbeat to a list of peers to sync cluster state
+// Heartbeat sends a heartbeat to a list of peers to sync cluster state.
 func (cm *ClusterManager) Heartbeat(peerList ...*peer.Peer) {
 	if len(peerList) == 0 {
-		log.Printf("Skipping heartbeat: No peers found.")
+		log.Printf("cluster manager: skipping heartbeat, no peers found")
 		return
 	}
 
-	log.Printf("Sending heartbeat to %d peers...", len(peerList))
+	log.Printf("cluster manager: sending heartbeat to %d peers", len(peerList))
 	for _, peerToCheck := range peerList {
 		client, ok := cm.GetPeerClient(peerToCheck.NodeID)
 		if !ok {
-			log.Printf("Heartbeat failed for peer %s: Client not found. Removing from cluster.", peerToCheck.NodeID)
+			log.Printf("cluster manager: heartbeat failed for peer %s, client not found, removing from cluster", peerToCheck.NodeID)
 			cm.RemoveNode(peerToCheck.NodeID)
 			continue
 		}
@@ -218,17 +220,17 @@ func (cm *ClusterManager) Heartbeat(peerList ...*peer.Peer) {
 
 		res, err := client.Heartbeat(ctx, req)
 		if err != nil {
-			log.Printf("Heartbeat check failed for peer %s: %v. Removing from cluster.", peerToCheck.NodeID, err)
+			log.Printf("cluster manager: heartbeat check failed for peer %s, removing from cluster: %v", peerToCheck.NodeID, err)
 			cm.RemoveNode(peerToCheck.NodeID)
 		} else {
-			log.Printf("Heartbeat check successful for peer %s.", peerToCheck.NodeID)
+			log.Printf("cluster manager: heartbeat check successful for peer %s", peerToCheck.NodeID)
 			cm.MergeState(res.Peers)
 		}
 		cancel()
 	}
 }
 
-// Merge state of a slice of peers with the cluster state
+// MergeState merges the state of a slice of peers with the cluster state.
 func (cm *ClusterManager) MergeState(nodes []*clusterpb.Node) {
 	for _, remoteNode := range nodes {
 
@@ -259,65 +261,87 @@ func (cm *ClusterManager) MergeState(nodes []*clusterpb.Node) {
 	}
 }
 
-// // Rebalances cluster keys when a new node is added
-// func (cm *ClusterManager) Rebalance() {
-// 	hashes := cm.HashMap.HScan()
+// Rebalance redistributes keys across the cluster when a new node is added.
+func (cm *ClusterManager) Rebalance() {
+	log.Println("cluster manager: rebalancing cluster")
+	hashes := cm.HashMap.GetAllData()
 
-// 	for _, hash := range hashes {
-// 		responsibleNodeID := cm.GetResponsibleNode(hash)
-// 		if responsibleNodeID != cm.NodeID {
-// 			entries := cm.HashMap.HGetAll(hash)
-// 			log.Printf("Rebalancing %v keys from hash %s to peer %s.", len(entries), hash, responsibleNodeID)
-// 			client, ok := cm.GetPeerClient(responsibleNodeID)
-// 			if !ok {
-// 				log.Printf("Rebalance failed for peer %s: Client not found.", responsibleNodeID)
-// 				continue
-// 			}
-// 			stream, _ := client.StreamSet(context.Background())
+	commandsByNode := make(map[string][]*clusterpb.CommandRequest)
 
-// 			go func() {
-// 				for key, entry := range entries {
-// 					req := &clusterpb.SetRequest{
-// 						Hash: hash,
-// 						Key:  key,
-// 						Data: entry.Data,
-// 						Ttl:  time.Now().Unix() - entry.ExpiresAt,
-// 					}
+	for hash, entries := range hashes {
+		responsibleNodeID := cm.GetResponsibleNode(hash)
 
-// 					if err := stream.Send(req); err != nil {
-// 						log.Fatalf("Send error: %v", err)
-// 					}
-// 				}
-// 				stream.CloseSend()
-// 			}()
+		if responsibleNodeID != cm.NodeID {
+			for key, value := range entries {
+				ttl := int64(0)
+				if value.ExpiresAt > 0 {
+					ttl = value.ExpiresAt - time.Now().Unix()
+				}
 
-// 			for {
-// 				_, err := stream.Recv()
-// 				if err == io.EOF {
-// 					break
-// 				}
-// 			}
-// 		}
-// 	}
-// }
+				args := make([][]byte, 0)
+				args = append(args, []byte(key))
+				args = append(args, value.Data)
+				args = append(args, []byte(fmt.Sprintf("%d", ttl)))
 
-// RunCommand executes a command, either locally or by forwarding to the responsible node.
+				req := &clusterpb.CommandRequest{
+					Command: "HSET",
+					Key:     hash,
+					Args:    args,
+				}
+
+				commandsByNode[responsibleNodeID] = append(commandsByNode[responsibleNodeID], req)
+			}
+		}
+	}
+
+	for nodeID, commands := range commandsByNode {
+		client, ok := cm.GetPeerClient(nodeID)
+		if !ok {
+			log.Printf("cluster manager: rebalance failed for peer %s, client not found", nodeID)
+			continue
+		}
+
+		stream, err := client.StreamCommand(context.Background())
+		if err != nil {
+			log.Printf("cluster manager: rebalance failed for peer %s, stream error: %v", nodeID, err)
+			continue
+		}
+
+		for _, cmd := range commands {
+			if err := stream.Send(cmd); err != nil {
+				log.Printf("cluster manager: rebalance failed for peer %s, send error: %v", nodeID, err)
+				continue
+			}
+		}
+
+		if err := stream.CloseSend(); err != nil {
+			log.Printf("cluster manager: rebalance failed for peer %s, close error: %v", nodeID, err)
+			continue
+		}
+
+		cm.HashMap.HDel(commands[0].Key)
+	}
+
+	log.Println("cluster manager: rebalancing finished")
+}
+
+// RunCommand executes a command, either locally or by forwarding it to the responsible node.
 func (cm *ClusterManager) RunCommand(commandName string, key string, args ...[]byte) (any, error) {
 	responsibleNodeID := cm.GetResponsibleNode(key)
 	if responsibleNodeID == cm.NodeID {
-		// Execute the command locally
+		// Execute the command locally.
 		cmd, ok := cm.CommandRegistry.Get(commandName)
 		if !ok {
-			return nil, fmt.Errorf("unknown command: %s", commandName)
+			return nil, fmt.Errorf("cluster manager: unknown command: %s", commandName)
 		}
 		return cmd(key, args...)
 	} else {
-		// Forward the command to the responsible node
+		// Forward the command to the responsible node.
 		client, ok := cm.GetPeerClient(responsibleNodeID)
 		if !ok {
-			log.Printf("failed to get client for node %s", responsibleNodeID)
+			log.Printf("cluster manager: failed to get client for node %s", responsibleNodeID)
 			cm.RemoveNode(responsibleNodeID)
-			log.Printf("Attempting to run command again.")
+			log.Printf("cluster manager: attempting to run command again")
 			return cm.RunCommand(commandName, key, args...)
 		}
 		req := &clusterpb.CommandRequest{
@@ -327,9 +351,9 @@ func (cm *ClusterManager) RunCommand(commandName string, key string, args ...[]b
 		}
 		res, err := client.RunCommand(context.Background(), req)
 		if err != nil {
-			log.Printf("failed to forward command to node %s: %v.", responsibleNodeID, err)
+			log.Printf("cluster manager: failed to forward command to node %s: %v", responsibleNodeID, err)
 			cm.RemoveNode(responsibleNodeID)
-			log.Printf("Attempting to run command again.")
+			log.Printf("cluster manager: attempting to run command again")
 			return cm.RunCommand(commandName, key, args...)
 		}
 		return response.Unmarshal(res)
