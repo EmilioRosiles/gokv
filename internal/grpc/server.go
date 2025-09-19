@@ -2,10 +2,8 @@ package grpc
 
 import (
 	"context"
-	"io"
 	"log"
 	"net"
-	"time"
 
 	"gokv/internal/cluster"
 	"gokv/internal/models/peer"
@@ -47,86 +45,12 @@ func (s *clusterNodeServer) Heartbeat(ctx context.Context, req *clusterpb.Heartb
 	return &clusterpb.HeartbeatResponse{Peers: peerspb}, nil
 }
 
-// Get gRPC message handler
-func (s *clusterNodeServer) Get(ctx context.Context, req *clusterpb.GetRequest) (*clusterpb.GetResponse, error) {
-	log.Printf("Received get for hash %s", req.Hash)
-	data := s.cm.Get(req.Hash, req.Key)
-	return &clusterpb.GetResponse{Data: data}, nil
-}
-
-// Set gRPC message handler
-func (s *clusterNodeServer) Set(ctx context.Context, req *clusterpb.SetRequest) (*clusterpb.SetResponse, error) {
-	log.Printf("Received set for hash %s", req.Hash)
-	s.cm.Set(req.Hash, req.Key, req.Data, time.Duration(req.Ttl))
-	return &clusterpb.SetResponse{Success: true}, nil
-}
-
-// Delete gRPC message handler
-func (s *clusterNodeServer) Delete(ctx context.Context, req *clusterpb.DeleteRequest) (*clusterpb.DeleteResponse, error) {
-	log.Printf("Received delete for hash %s", req.Hash)
-	s.cm.Delete(req.Hash, req.Key)
-	return &clusterpb.DeleteResponse{Success: true}, nil
-}
-
-// Stream Get gRPC message handler
-func (s *clusterNodeServer) StreamGet(stream clusterpb.ClusterNode_StreamGetServer) error {
-	for {
-		req, err := stream.Recv()
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-
-		log.Printf("Received set for hash %s", req.Hash)
-		data := s.cm.Get(req.Hash, req.Key)
-
-		res := &clusterpb.GetResponse{Data: data}
-		if err := stream.Send(res); err != nil {
-			return err
-		}
+// RunCommand gRPC message handler
+func (s *clusterNodeServer) RunCommand(ctx context.Context, req *clusterpb.CommandRequest) (*clusterpb.CommandResponse, error) {
+	log.Printf("Received command %s for key %s", req.Command, req.Key)
+	data, err := s.cm.RunCommand(req.Command, req.Key, req.Args...)
+	if err != nil {
+		return &clusterpb.CommandResponse{Error: err.Error()}, nil
 	}
-}
-
-// Stream Set gRPC message handler
-func (s *clusterNodeServer) StreamSet(stream clusterpb.ClusterNode_StreamSetServer) error {
-	for {
-		req, err := stream.Recv()
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-
-		log.Printf("Received set for hash %s", req.Hash)
-		s.cm.Set(req.Hash, req.Key, req.Data, time.Duration(req.Ttl))
-
-		res := &clusterpb.SetResponse{Success: true}
-		if err := stream.Send(res); err != nil {
-			return err
-		}
-	}
-}
-
-// Stream Get gRPC message handler
-func (s *clusterNodeServer) StreamDelete(stream clusterpb.ClusterNode_StreamDeleteServer) error {
-	for {
-		req, err := stream.Recv()
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-
-		log.Printf("Received set for hash %s", req.Hash)
-		s.cm.Delete(req.Hash, req.Key)
-
-		res := &clusterpb.DeleteResponse{Success: true}
-		if err := stream.Send(res); err != nil {
-			return err
-		}
-	}
+	return &clusterpb.CommandResponse{Data: data}, nil
 }

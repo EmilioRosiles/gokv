@@ -6,14 +6,7 @@ package clusterpb;
 
 service ClusterNode {
   rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
-  // Unary RPCs
-  rpc Get(GetRequest) returns (GetResponse);
-  rpc Set(SetRequest) returns (SetResponse);
-  rpc Delete(DeleteRequest) returns (DeleteResponse);
-  // Streaming RPCs for pipelining
-  rpc StreamGet(stream GetRequest) returns (stream GetResponse);
-  rpc StreamSet(stream SetRequest) returns (stream SetResponse);
-  rpc StreamDelete(stream DeleteRequest) returns (stream DeleteResponse);
+  rpc RunCommand(CommandRequest) returns (CommandResponse);
 }
 
 message Node {
@@ -32,31 +25,13 @@ message HeartbeatResponse {
   repeated Node peers = 1;
 }
 
-message GetRequest {
-  string hash = 1;
+message CommandRequest {
+  string command = 1;
   string key = 2;
+  repeated bytes args = 3;
 }
 
-message GetResponse {
+message CommandResponse {
   bytes data = 1;
-}
-
-message SetRequest {
-  string hash = 1;
-  string key = 2;
-  bytes data = 3;
-  int64 ttl = 4;
-}
-
-message SetResponse {
-  bool success = 1;
-}
-
-message DeleteRequest {
-  string hash = 1;
-  string key = 2;
-}
-
-message DeleteResponse {
-  bool success = 1;
+  string error = 2;
 }

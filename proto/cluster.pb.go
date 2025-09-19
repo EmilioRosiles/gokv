@@ -185,28 +185,29 @@ func (x *HeartbeatResponse) GetPeers() []*Node {
 	return nil
 }
 
-type GetRequest struct {
+type CommandRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Hash          string                 `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
+	Command       string                 `protobuf:"bytes,1,opt,name=command,proto3" json:"command,omitempty"`
 	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	Args          [][]byte               `protobuf:"bytes,3,rep,name=args,proto3" json:"args,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetRequest) Reset() {
-	*x = GetRequest{}
+func (x *CommandRequest) Reset() {
+	*x = CommandRequest{}
 	mi := &file_proto_cluster_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetRequest) String() string {
+func (x *CommandRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetRequest) ProtoMessage() {}
+func (*CommandRequest) ProtoMessage() {}
 
-func (x *GetRequest) ProtoReflect() protoreflect.Message {
+func (x *CommandRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_cluster_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -218,46 +219,54 @@ func (x *GetRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetRequest.ProtoReflect.Descriptor instead.
-func (*GetRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use CommandRequest.ProtoReflect.Descriptor instead.
+func (*CommandRequest) Descriptor() ([]byte, []int) {
 	return file_proto_cluster_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *GetRequest) GetHash() string {
+func (x *CommandRequest) GetCommand() string {
 	if x != nil {
-		return x.Hash
+		return x.Command
 	}
 	return ""
 }
 
-func (x *GetRequest) GetKey() string {
+func (x *CommandRequest) GetKey() string {
 	if x != nil {
 		return x.Key
 	}
 	return ""
 }
 
-type GetResponse struct {
+func (x *CommandRequest) GetArgs() [][]byte {
+	if x != nil {
+		return x.Args
+	}
+	return nil
+}
+
+type CommandResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Data          []byte                 `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetResponse) Reset() {
-	*x = GetResponse{}
+func (x *CommandResponse) Reset() {
+	*x = CommandResponse{}
 	mi := &file_proto_cluster_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetResponse) String() string {
+func (x *CommandResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetResponse) ProtoMessage() {}
+func (*CommandResponse) ProtoMessage() {}
 
-func (x *GetResponse) ProtoReflect() protoreflect.Message {
+func (x *CommandResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_cluster_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -269,224 +278,23 @@ func (x *GetResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetResponse.ProtoReflect.Descriptor instead.
-func (*GetResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use CommandResponse.ProtoReflect.Descriptor instead.
+func (*CommandResponse) Descriptor() ([]byte, []int) {
 	return file_proto_cluster_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *GetResponse) GetData() []byte {
+func (x *CommandResponse) GetData() []byte {
 	if x != nil {
 		return x.Data
 	}
 	return nil
 }
 
-type SetRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Hash          string                 `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
-	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
-	Data          []byte                 `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
-	Ttl           int64                  `protobuf:"varint,4,opt,name=ttl,proto3" json:"ttl,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SetRequest) Reset() {
-	*x = SetRequest{}
-	mi := &file_proto_cluster_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SetRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SetRequest) ProtoMessage() {}
-
-func (x *SetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_cluster_proto_msgTypes[5]
+func (x *CommandResponse) GetError() string {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SetRequest.ProtoReflect.Descriptor instead.
-func (*SetRequest) Descriptor() ([]byte, []int) {
-	return file_proto_cluster_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *SetRequest) GetHash() string {
-	if x != nil {
-		return x.Hash
+		return x.Error
 	}
 	return ""
-}
-
-func (x *SetRequest) GetKey() string {
-	if x != nil {
-		return x.Key
-	}
-	return ""
-}
-
-func (x *SetRequest) GetData() []byte {
-	if x != nil {
-		return x.Data
-	}
-	return nil
-}
-
-func (x *SetRequest) GetTtl() int64 {
-	if x != nil {
-		return x.Ttl
-	}
-	return 0
-}
-
-type SetResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SetResponse) Reset() {
-	*x = SetResponse{}
-	mi := &file_proto_cluster_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SetResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SetResponse) ProtoMessage() {}
-
-func (x *SetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_cluster_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SetResponse.ProtoReflect.Descriptor instead.
-func (*SetResponse) Descriptor() ([]byte, []int) {
-	return file_proto_cluster_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *SetResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-type DeleteRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Hash          string                 `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
-	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteRequest) Reset() {
-	*x = DeleteRequest{}
-	mi := &file_proto_cluster_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteRequest) ProtoMessage() {}
-
-func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_cluster_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteRequest.ProtoReflect.Descriptor instead.
-func (*DeleteRequest) Descriptor() ([]byte, []int) {
-	return file_proto_cluster_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *DeleteRequest) GetHash() string {
-	if x != nil {
-		return x.Hash
-	}
-	return ""
-}
-
-func (x *DeleteRequest) GetKey() string {
-	if x != nil {
-		return x.Key
-	}
-	return ""
-}
-
-type DeleteResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteResponse) Reset() {
-	*x = DeleteResponse{}
-	mi := &file_proto_cluster_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteResponse) ProtoMessage() {}
-
-func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_cluster_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteResponse.ProtoReflect.Descriptor instead.
-func (*DeleteResponse) Descriptor() ([]byte, []int) {
-	return file_proto_cluster_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *DeleteResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
 }
 
 var File_proto_cluster_proto protoreflect.FileDescriptor
@@ -503,34 +311,18 @@ const file_proto_cluster_proto_rawDesc = "" +
 	"\x04self\x18\x01 \x01(\v2\x0f.clusterpb.NodeR\x04self\x12%\n" +
 	"\x05peers\x18\x02 \x03(\v2\x0f.clusterpb.NodeR\x05peers\":\n" +
 	"\x11HeartbeatResponse\x12%\n" +
-	"\x05peers\x18\x01 \x03(\v2\x0f.clusterpb.NodeR\x05peers\"2\n" +
-	"\n" +
-	"GetRequest\x12\x12\n" +
-	"\x04hash\x18\x01 \x01(\tR\x04hash\x12\x10\n" +
-	"\x03key\x18\x02 \x01(\tR\x03key\"!\n" +
-	"\vGetResponse\x12\x12\n" +
-	"\x04data\x18\x01 \x01(\fR\x04data\"X\n" +
-	"\n" +
-	"SetRequest\x12\x12\n" +
-	"\x04hash\x18\x01 \x01(\tR\x04hash\x12\x10\n" +
+	"\x05peers\x18\x01 \x03(\v2\x0f.clusterpb.NodeR\x05peers\"P\n" +
+	"\x0eCommandRequest\x12\x18\n" +
+	"\acommand\x18\x01 \x01(\tR\acommand\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12\x12\n" +
-	"\x04data\x18\x03 \x01(\fR\x04data\x12\x10\n" +
-	"\x03ttl\x18\x04 \x01(\x03R\x03ttl\"'\n" +
-	"\vSetResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"5\n" +
-	"\rDeleteRequest\x12\x12\n" +
-	"\x04hash\x18\x01 \x01(\tR\x04hash\x12\x10\n" +
-	"\x03key\x18\x02 \x01(\tR\x03key\"*\n" +
-	"\x0eDeleteResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess2\xc9\x03\n" +
+	"\x04args\x18\x03 \x03(\fR\x04args\";\n" +
+	"\x0fCommandResponse\x12\x12\n" +
+	"\x04data\x18\x01 \x01(\fR\x04data\x12\x14\n" +
+	"\x05error\x18\x02 \x01(\tR\x05error2\x9a\x01\n" +
 	"\vClusterNode\x12F\n" +
-	"\tHeartbeat\x12\x1b.clusterpb.HeartbeatRequest\x1a\x1c.clusterpb.HeartbeatResponse\x124\n" +
-	"\x03Get\x12\x15.clusterpb.GetRequest\x1a\x16.clusterpb.GetResponse\x124\n" +
-	"\x03Set\x12\x15.clusterpb.SetRequest\x1a\x16.clusterpb.SetResponse\x12=\n" +
-	"\x06Delete\x12\x18.clusterpb.DeleteRequest\x1a\x19.clusterpb.DeleteResponse\x12>\n" +
-	"\tStreamGet\x12\x15.clusterpb.GetRequest\x1a\x16.clusterpb.GetResponse(\x010\x01\x12>\n" +
-	"\tStreamSet\x12\x15.clusterpb.SetRequest\x1a\x16.clusterpb.SetResponse(\x010\x01\x12G\n" +
-	"\fStreamDelete\x12\x18.clusterpb.DeleteRequest\x1a\x19.clusterpb.DeleteResponse(\x010\x01B\rZ\v./clusterpbb\x06proto3"
+	"\tHeartbeat\x12\x1b.clusterpb.HeartbeatRequest\x1a\x1c.clusterpb.HeartbeatResponse\x12C\n" +
+	"\n" +
+	"RunCommand\x12\x19.clusterpb.CommandRequest\x1a\x1a.clusterpb.CommandResponseB\rZ\v./clusterpbb\x06proto3"
 
 var (
 	file_proto_cluster_proto_rawDescOnce sync.Once
@@ -544,41 +336,27 @@ func file_proto_cluster_proto_rawDescGZIP() []byte {
 	return file_proto_cluster_proto_rawDescData
 }
 
-var file_proto_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_proto_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_proto_cluster_proto_goTypes = []any{
 	(*Node)(nil),              // 0: clusterpb.Node
 	(*HeartbeatRequest)(nil),  // 1: clusterpb.HeartbeatRequest
 	(*HeartbeatResponse)(nil), // 2: clusterpb.HeartbeatResponse
-	(*GetRequest)(nil),        // 3: clusterpb.GetRequest
-	(*GetResponse)(nil),       // 4: clusterpb.GetResponse
-	(*SetRequest)(nil),        // 5: clusterpb.SetRequest
-	(*SetResponse)(nil),       // 6: clusterpb.SetResponse
-	(*DeleteRequest)(nil),     // 7: clusterpb.DeleteRequest
-	(*DeleteResponse)(nil),    // 8: clusterpb.DeleteResponse
+	(*CommandRequest)(nil),    // 3: clusterpb.CommandRequest
+	(*CommandResponse)(nil),   // 4: clusterpb.CommandResponse
 }
 var file_proto_cluster_proto_depIdxs = []int32{
-	0,  // 0: clusterpb.HeartbeatRequest.self:type_name -> clusterpb.Node
-	0,  // 1: clusterpb.HeartbeatRequest.peers:type_name -> clusterpb.Node
-	0,  // 2: clusterpb.HeartbeatResponse.peers:type_name -> clusterpb.Node
-	1,  // 3: clusterpb.ClusterNode.Heartbeat:input_type -> clusterpb.HeartbeatRequest
-	3,  // 4: clusterpb.ClusterNode.Get:input_type -> clusterpb.GetRequest
-	5,  // 5: clusterpb.ClusterNode.Set:input_type -> clusterpb.SetRequest
-	7,  // 6: clusterpb.ClusterNode.Delete:input_type -> clusterpb.DeleteRequest
-	3,  // 7: clusterpb.ClusterNode.StreamGet:input_type -> clusterpb.GetRequest
-	5,  // 8: clusterpb.ClusterNode.StreamSet:input_type -> clusterpb.SetRequest
-	7,  // 9: clusterpb.ClusterNode.StreamDelete:input_type -> clusterpb.DeleteRequest
-	2,  // 10: clusterpb.ClusterNode.Heartbeat:output_type -> clusterpb.HeartbeatResponse
-	4,  // 11: clusterpb.ClusterNode.Get:output_type -> clusterpb.GetResponse
-	6,  // 12: clusterpb.ClusterNode.Set:output_type -> clusterpb.SetResponse
-	8,  // 13: clusterpb.ClusterNode.Delete:output_type -> clusterpb.DeleteResponse
-	4,  // 14: clusterpb.ClusterNode.StreamGet:output_type -> clusterpb.GetResponse
-	6,  // 15: clusterpb.ClusterNode.StreamSet:output_type -> clusterpb.SetResponse
-	8,  // 16: clusterpb.ClusterNode.StreamDelete:output_type -> clusterpb.DeleteResponse
-	10, // [10:17] is the sub-list for method output_type
-	3,  // [3:10] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+	0, // 0: clusterpb.HeartbeatRequest.self:type_name -> clusterpb.Node
+	0, // 1: clusterpb.HeartbeatRequest.peers:type_name -> clusterpb.Node
+	0, // 2: clusterpb.HeartbeatResponse.peers:type_name -> clusterpb.Node
+	1, // 3: clusterpb.ClusterNode.Heartbeat:input_type -> clusterpb.HeartbeatRequest
+	3, // 4: clusterpb.ClusterNode.RunCommand:input_type -> clusterpb.CommandRequest
+	2, // 5: clusterpb.ClusterNode.Heartbeat:output_type -> clusterpb.HeartbeatResponse
+	4, // 6: clusterpb.ClusterNode.RunCommand:output_type -> clusterpb.CommandResponse
+	5, // [5:7] is the sub-list for method output_type
+	3, // [3:5] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_proto_cluster_proto_init() }
@@ -592,7 +370,7 @@ func file_proto_cluster_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_cluster_proto_rawDesc), len(file_proto_cluster_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

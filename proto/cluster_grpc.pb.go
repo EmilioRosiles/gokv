@@ -19,13 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ClusterNode_Heartbeat_FullMethodName    = "/clusterpb.ClusterNode/Heartbeat"
-	ClusterNode_Get_FullMethodName          = "/clusterpb.ClusterNode/Get"
-	ClusterNode_Set_FullMethodName          = "/clusterpb.ClusterNode/Set"
-	ClusterNode_Delete_FullMethodName       = "/clusterpb.ClusterNode/Delete"
-	ClusterNode_StreamGet_FullMethodName    = "/clusterpb.ClusterNode/StreamGet"
-	ClusterNode_StreamSet_FullMethodName    = "/clusterpb.ClusterNode/StreamSet"
-	ClusterNode_StreamDelete_FullMethodName = "/clusterpb.ClusterNode/StreamDelete"
+	ClusterNode_Heartbeat_FullMethodName  = "/clusterpb.ClusterNode/Heartbeat"
+	ClusterNode_RunCommand_FullMethodName = "/clusterpb.ClusterNode/RunCommand"
 )
 
 // ClusterNodeClient is the client API for ClusterNode service.
@@ -33,14 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ClusterNodeClient interface {
 	Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error)
-	// Unary RPCs
-	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetResponse, error)
-	Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*SetResponse, error)
-	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
-	// Streaming RPCs for pipelining
-	StreamGet(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[GetRequest, GetResponse], error)
-	StreamSet(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[SetRequest, SetResponse], error)
-	StreamDelete(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[DeleteRequest, DeleteResponse], error)
+	RunCommand(ctx context.Context, in *CommandRequest, opts ...grpc.CallOption) (*CommandResponse, error)
 }
 
 type clusterNodeClient struct {
@@ -61,88 +49,22 @@ func (c *clusterNodeClient) Heartbeat(ctx context.Context, in *HeartbeatRequest,
 	return out, nil
 }
 
-func (c *clusterNodeClient) Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetResponse, error) {
+func (c *clusterNodeClient) RunCommand(ctx context.Context, in *CommandRequest, opts ...grpc.CallOption) (*CommandResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetResponse)
-	err := c.cc.Invoke(ctx, ClusterNode_Get_FullMethodName, in, out, cOpts...)
+	out := new(CommandResponse)
+	err := c.cc.Invoke(ctx, ClusterNode_RunCommand_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
-
-func (c *clusterNodeClient) Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*SetResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SetResponse)
-	err := c.cc.Invoke(ctx, ClusterNode_Set_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *clusterNodeClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DeleteResponse)
-	err := c.cc.Invoke(ctx, ClusterNode_Delete_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *clusterNodeClient) StreamGet(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[GetRequest, GetResponse], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &ClusterNode_ServiceDesc.Streams[0], ClusterNode_StreamGet_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[GetRequest, GetResponse]{ClientStream: stream}
-	return x, nil
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ClusterNode_StreamGetClient = grpc.BidiStreamingClient[GetRequest, GetResponse]
-
-func (c *clusterNodeClient) StreamSet(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[SetRequest, SetResponse], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &ClusterNode_ServiceDesc.Streams[1], ClusterNode_StreamSet_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[SetRequest, SetResponse]{ClientStream: stream}
-	return x, nil
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ClusterNode_StreamSetClient = grpc.BidiStreamingClient[SetRequest, SetResponse]
-
-func (c *clusterNodeClient) StreamDelete(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[DeleteRequest, DeleteResponse], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &ClusterNode_ServiceDesc.Streams[2], ClusterNode_StreamDelete_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[DeleteRequest, DeleteResponse]{ClientStream: stream}
-	return x, nil
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ClusterNode_StreamDeleteClient = grpc.BidiStreamingClient[DeleteRequest, DeleteResponse]
 
 // ClusterNodeServer is the server API for ClusterNode service.
 // All implementations must embed UnimplementedClusterNodeServer
 // for forward compatibility.
 type ClusterNodeServer interface {
 	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
-	// Unary RPCs
-	Get(context.Context, *GetRequest) (*GetResponse, error)
-	Set(context.Context, *SetRequest) (*SetResponse, error)
-	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
-	// Streaming RPCs for pipelining
-	StreamGet(grpc.BidiStreamingServer[GetRequest, GetResponse]) error
-	StreamSet(grpc.BidiStreamingServer[SetRequest, SetResponse]) error
-	StreamDelete(grpc.BidiStreamingServer[DeleteRequest, DeleteResponse]) error
+	RunCommand(context.Context, *CommandRequest) (*CommandResponse, error)
 	mustEmbedUnimplementedClusterNodeServer()
 }
 
@@ -156,23 +78,8 @@ type UnimplementedClusterNodeServer struct{}
 func (UnimplementedClusterNodeServer) Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Heartbeat not implemented")
 }
-func (UnimplementedClusterNodeServer) Get(context.Context, *GetRequest) (*GetResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
-}
-func (UnimplementedClusterNodeServer) Set(context.Context, *SetRequest) (*SetResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Set not implemented")
-}
-func (UnimplementedClusterNodeServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
-}
-func (UnimplementedClusterNodeServer) StreamGet(grpc.BidiStreamingServer[GetRequest, GetResponse]) error {
-	return status.Errorf(codes.Unimplemented, "method StreamGet not implemented")
-}
-func (UnimplementedClusterNodeServer) StreamSet(grpc.BidiStreamingServer[SetRequest, SetResponse]) error {
-	return status.Errorf(codes.Unimplemented, "method StreamSet not implemented")
-}
-func (UnimplementedClusterNodeServer) StreamDelete(grpc.BidiStreamingServer[DeleteRequest, DeleteResponse]) error {
-	return status.Errorf(codes.Unimplemented, "method StreamDelete not implemented")
+func (UnimplementedClusterNodeServer) RunCommand(context.Context, *CommandRequest) (*CommandResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunCommand not implemented")
 }
 func (UnimplementedClusterNodeServer) mustEmbedUnimplementedClusterNodeServer() {}
 func (UnimplementedClusterNodeServer) testEmbeddedByValue()                     {}
@@ -213,80 +120,23 @@ func _ClusterNode_Heartbeat_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ClusterNode_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetRequest)
+func _ClusterNode_RunCommand_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommandRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ClusterNodeServer).Get(ctx, in)
+		return srv.(ClusterNodeServer).RunCommand(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ClusterNode_Get_FullMethodName,
+		FullMethod: ClusterNode_RunCommand_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ClusterNodeServer).Get(ctx, req.(*GetRequest))
+		return srv.(ClusterNodeServer).RunCommand(ctx, req.(*CommandRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
-
-func _ClusterNode_Set_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ClusterNodeServer).Set(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ClusterNode_Set_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ClusterNodeServer).Set(ctx, req.(*SetRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ClusterNode_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ClusterNodeServer).Delete(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ClusterNode_Delete_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ClusterNodeServer).Delete(ctx, req.(*DeleteRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ClusterNode_StreamGet_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(ClusterNodeServer).StreamGet(&grpc.GenericServerStream[GetRequest, GetResponse]{ServerStream: stream})
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ClusterNode_StreamGetServer = grpc.BidiStreamingServer[GetRequest, GetResponse]
-
-func _ClusterNode_StreamSet_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(ClusterNodeServer).StreamSet(&grpc.GenericServerStream[SetRequest, SetResponse]{ServerStream: stream})
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ClusterNode_StreamSetServer = grpc.BidiStreamingServer[SetRequest, SetResponse]
-
-func _ClusterNode_StreamDelete_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(ClusterNodeServer).StreamDelete(&grpc.GenericServerStream[DeleteRequest, DeleteResponse]{ServerStream: stream})
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ClusterNode_StreamDeleteServer = grpc.BidiStreamingServer[DeleteRequest, DeleteResponse]
 
 // ClusterNode_ServiceDesc is the grpc.ServiceDesc for ClusterNode service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -300,37 +150,10 @@ var ClusterNode_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ClusterNode_Heartbeat_Handler,
 		},
 		{
-			MethodName: "Get",
-			Handler:    _ClusterNode_Get_Handler,
-		},
-		{
-			MethodName: "Set",
-			Handler:    _ClusterNode_Set_Handler,
-		},
-		{
-			MethodName: "Delete",
-			Handler:    _ClusterNode_Delete_Handler,
+			MethodName: "RunCommand",
+			Handler:    _ClusterNode_RunCommand_Handler,
 		},
 	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "StreamGet",
-			Handler:       _ClusterNode_StreamGet_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-		{
-			StreamName:    "StreamSet",
-			Handler:       _ClusterNode_StreamSet_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-		{
-			StreamName:    "StreamDelete",
-			Handler:       _ClusterNode_StreamDelete_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "proto/cluster.proto",
 }
