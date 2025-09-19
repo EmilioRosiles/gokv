@@ -148,85 +148,29 @@ func (c *HashMap) HGetAll(hash string, args ...[]byte) (any, error) {
 		return nil, errors.New("HGETALL does not take any arguments")
 	}
 
-	results := c.getAll(hash)
-	if results == nil {
-		return &clusterpb.KeyValueList{List: []*clusterpb.KeyValue{}}, nil
-	}
-
-	kvList := &clusterpb.KeyValueList{
-		List: make([]*clusterpb.KeyValue, 0, len(results)),
-	}
-
-	for key, entry := range results {
-		kvList.List = append(kvList.List, &clusterpb.KeyValue{Key: key, Value: entry.Data})
-	}
-
-	return kvList, nil
-}
-
-// HScan performs a scan of the entire hashmap.
-func (c *HashMap) HScan(key string, args ...[]byte) (any, error) {
-	if len(args) != 0 {
-		return nil, errors.New("HSCAN does not take any arguments")
-	}
-
-	hashKeys := c.scanKeys()
-	responseMap := &clusterpb.KeyValueMap{
-		Map: make(map[string]*clusterpb.KeyValueList),
-	}
-
-	for _, hashKey := range hashKeys {
-		fields := c.getAll(hashKey)
-		if fields == nil {
-			continue
-		}
-
-		kvList := &clusterpb.KeyValueList{
-			List: make([]*clusterpb.KeyValue, 0, len(fields)),
-		}
-
-		for key, entry := range fields {
-			kvList.List = append(kvList.List, &clusterpb.KeyValue{Key: key, Value: entry.Data})
-		}
-		responseMap.Map[hashKey] = kvList
-	}
-
-	return responseMap, nil
-}
-
-// getAll retrieves all non-expired fields and their values from a hash.
-func (c *HashMap) getAll(hash string) map[string]*fieldEntry {
 	c.mu.RLock()
 	he, ok := c.hashes[hash]
 	c.mu.RUnlock()
 
 	if !ok {
-		return nil
+		return &clusterpb.KeyValueList{List: []*clusterpb.KeyValue{}}, nil
 	}
 
 	he.mu.RLock()
 	defer he.mu.RUnlock()
 
-	results := make(map[string]*fieldEntry)
+	kvList := &clusterpb.KeyValueList{
+		List: make([]*clusterpb.KeyValue, 0),
+	}
+
 	for key, entry := range he.items {
 		if entry.ExpiresAt > 0 && time.Now().UnixNano() > entry.ExpiresAt {
 			continue
 		}
-		results[key] = entry
+		kvList.List = append(kvList.List, &clusterpb.KeyValue{Key: key, Value: entry.Data})
 	}
 
-	return results
-}
-
-// scanKeys retrieves all keys from the cache.
-func (c *HashMap) scanKeys() []string {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	keys := make([]string, 0, len(c.hashes))
-	for k := range c.hashes {
-		keys = append(keys, k)
-	}
-	return keys
+	return kvList, nil
 }
 
 // Janitor struct to hold cleanup properties.
@@ -252,32 +196,19 @@ func (j *janitor) run(c *HashMap) {
 // deleteExpired iterates through the cache and removes expired items.
 func (c *HashMap) deleteExpired() {
 	now := time.Now().UnixNano()
-	c.mu.RLock()
-	hashes := c.scanKeys()
-	c.mu.RUnlock()
 
-	for _, hash := range hashes {
-		c.mu.RLock()
-		he, ok := c.hashes[hash]
-		c.mu.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-		if !ok {
-			continue
-		}
-
-		he.mu.Lock()
+	for hash, he := range c.hashes {
 		for key, entry := range he.items {
 			if entry.ExpiresAt > 0 && now > entry.ExpiresAt {
 				delete(he.items, key)
 			}
 		}
-		isEmtpy := len(he.items) == 0
-		he.mu.Unlock()
 
-		if isEmtpy {
-			c.mu.Lock()
+		if len(he.items) == 0 {
 			delete(c.hashes, hash)
-			c.mu.Unlock()
 		}
 	}
 }
@@ -309,7 +240,6 @@ func NewHashMap(cr *command.CommandRegistry, cleanupInterval time.Duration) *Has
 	cr.Register("HSET", c.HSet)
 	cr.Register("HDEL", c.HDel)
 	cr.Register("HGETALL", c.HGetAll)
-	cr.Register("HSCAN", c.HScan)
 
 	return c
 }

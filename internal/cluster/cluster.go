@@ -306,11 +306,11 @@ func (cm *ClusterManager) RunCommand(commandName string, key string, args ...[]b
 	responsibleNodeID := cm.GetResponsibleNode(key)
 	if responsibleNodeID == cm.NodeID {
 		// Execute the command locally
-		cmdFunc, ok := cm.CommandRegistry.Get(commandName)
+		cmd, ok := cm.CommandRegistry.Get(commandName)
 		if !ok {
 			return nil, fmt.Errorf("unknown command: %s", commandName)
 		}
-		return cmdFunc(key, args...)
+		return cmd(key, args...)
 	} else {
 		// Forward the command to the responsible node
 		client, ok := cm.GetPeerClient(responsibleNodeID)

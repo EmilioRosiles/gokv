@@ -21,16 +21,16 @@ func NewCommandRegistry() *CommandRegistry {
 }
 
 // Register a command handler.
-func (r *CommandRegistry) Register(name string, fn CommandFunc) {
+func (r *CommandRegistry) Register(name string, cmd CommandFunc) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.commands[name] = fn
+	r.commands[name] = cmd
 }
 
 // Get a command handler.
 func (r *CommandRegistry) Get(name string) (CommandFunc, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	fn, ok := r.commands[name]
-	return fn, ok
+	cmd, ok := r.commands[name]
+	return cmd, ok
 }
