@@ -1,8 +1,9 @@
 package peer
 
 import (
-	clusterpb "gokv/proto"
 	"time"
+
+	"gokv/proto/clusterpb"
 )
 
 type Peer struct {

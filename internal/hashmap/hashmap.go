@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"gokv/internal/command"
+	"gokv/proto/clusterpb"
 )
 
 // fieldEntry represents an individual field in a hash, with its own TTL.
@@ -31,15 +32,42 @@ type HashMap struct {
 	janitor *janitor
 }
 
+// HGet retrieves a field from a hash.
+// It returns the data and true if the field exists and has not expired.
+func (c *HashMap) HGet(hash string, args ...[]byte) (any, error) {
+	if len(args) != 1 {
+		return nil, errors.New("HGET requires 1 argument: key")
+	}
+	key := string(args[0])
+
+	c.mu.RLock()
+	he, ok := c.hashes[hash]
+	c.mu.RUnlock()
+
+	if !ok {
+		return nil, errors.New("HGET hash not found")
+	}
+
+	he.mu.RLock()
+	entry, ok := he.items[key]
+	he.mu.RUnlock()
+
+	if !ok || entry.ExpiresAt > 0 && time.Now().UnixNano() > entry.ExpiresAt {
+		return nil, errors.New("HGET key not found")
+	}
+
+	return entry.Data, nil
+}
+
 // HSet sets a field in a hash to a given value with a specific TTL.
 // If the hash does not exist, it will be created.
 // If ttl is 0, the field will not expire.
-func (c *HashMap) HSet(hash string, args ...[]byte) ([]byte, error) {
+func (c *HashMap) HSet(hash string, args ...[]byte) (any, error) {
 	if len(args) < 2 || len(args) > 3 {
 		return nil, errors.New("HSET requires 2 or 3 arguments: field, value[, ttl]")
 	}
 	key := string(args[0])
-	data := args[0]
+	data := args[1]
 	var expiresAt int64 = 0
 	if len(args) == 3 {
 		var err error
@@ -71,74 +99,103 @@ func (c *HashMap) HSet(hash string, args ...[]byte) ([]byte, error) {
 	he.mu.Lock()
 	he.items[key] = entry
 	he.mu.Unlock()
-	return nil, nil
+	return true, nil
 }
 
-// HGet retrieves a field from a hash.
-// It returns the data and true if the field exists and has not expired.
-// Otherwise, it returns zero value for V and false.
-func (c *HashMap) HGet(hash string, args ...[]byte) ([]byte, error) {
-	if len(args) != 1 {
-		return nil, errors.New("HGET requires 1 argument: key")
-	}
-	key := string(args[0])
-
+// HDel deletes one or more fields from a hash. If no args are passed, it deletes the entire hash.
+func (c *HashMap) HDel(hash string, args ...[]byte) (any, error) {
 	c.mu.RLock()
 	he, ok := c.hashes[hash]
 	c.mu.RUnlock()
 
 	if !ok {
-		return nil, errors.New("HGET hash not found")
+		return int64(0), nil
 	}
 
-	he.mu.RLock()
-	entry, ok := he.items[key]
-	he.mu.RUnlock()
-
-	if !ok || entry.ExpiresAt > 0 && time.Now().UnixNano() > entry.ExpiresAt {
-		return nil, errors.New("HGET key not found")
+	// If no args, delete the whole hash
+	if len(args) == 0 {
+		c.mu.Lock()
+		delete(c.hashes, hash)
+		c.mu.Unlock()
+		return int64(1), nil
 	}
 
-	return entry.Data, nil
-}
-
-// HDel deletes one or more fields from a hash.
-func (c *HashMap) HDel(hash string, args ...[]byte) ([]byte, error) {
-	if len(args) != 1 {
-		return nil, errors.New("HDEL requires 1 argument: key")
-	}
-	key := string(args[0])
-
-	c.mu.RLock()
-	he, ok := c.hashes[hash]
-	c.mu.RUnlock()
-
-	if !ok {
-		return nil, errors.New("HDEL hash not found")
-	}
-
+	// Otherwise, delete specified keys
+	deletedCount := 0
 	he.mu.Lock()
-	delete(he.items, key)
-	isEmtpy := len(he.items) == 0
+	for _, keyBytes := range args {
+		key := string(keyBytes)
+		if _, ok := he.items[key]; ok {
+			delete(he.items, key)
+			deletedCount++
+		}
+	}
+	isEmpty := len(he.items) == 0
 	he.mu.Unlock()
 
-	if isEmtpy {
+	if isEmpty {
 		c.mu.Lock()
 		delete(c.hashes, hash)
 		c.mu.Unlock()
 	}
-	return nil, nil
+
+	return int64(deletedCount), nil
 }
 
-// HDel deletes all the fields in a hash.
-func (c *HashMap) HDelAll(hash string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	delete(c.hashes, hash)
+// HGetAll retrieves all fields and values from a hash.
+func (c *HashMap) HGetAll(hash string, args ...[]byte) (any, error) {
+	if len(args) != 0 {
+		return nil, errors.New("HGETALL does not take any arguments")
+	}
+
+	results := c.getAll(hash)
+	if results == nil {
+		return &clusterpb.KeyValueList{List: []*clusterpb.KeyValue{}}, nil
+	}
+
+	kvList := &clusterpb.KeyValueList{
+		List: make([]*clusterpb.KeyValue, 0, len(results)),
+	}
+
+	for key, entry := range results {
+		kvList.List = append(kvList.List, &clusterpb.KeyValue{Key: key, Value: entry.Data})
+	}
+
+	return kvList, nil
 }
 
-// HGetAll retrieves all non-expired fields and their values from a hash.
-func (c *HashMap) HGetAll(hash string) map[string]*fieldEntry {
+// HScan performs a scan of the entire hashmap.
+func (c *HashMap) HScan(key string, args ...[]byte) (any, error) {
+	if len(args) != 0 {
+		return nil, errors.New("HSCAN does not take any arguments")
+	}
+
+	hashKeys := c.scanKeys()
+	responseMap := &clusterpb.KeyValueMap{
+		Map: make(map[string]*clusterpb.KeyValueList),
+	}
+
+	for _, hashKey := range hashKeys {
+		fields := c.getAll(hashKey)
+		if fields == nil {
+			continue
+		}
+
+		kvList := &clusterpb.KeyValueList{
+			List: make([]*clusterpb.KeyValue, 0, len(fields)),
+		}
+
+		for key, entry := range fields {
+			kvList.List = append(kvList.List, &clusterpb.KeyValue{Key: key, Value: entry.Data})
+		}
+		responseMap.Map[hashKey] = kvList
+	}
+
+	return responseMap, nil
+}
+
+// getAll retrieves all non-expired fields and their values from a hash.
+func (c *HashMap) getAll(hash string) map[string]*fieldEntry {
 	c.mu.RLock()
 	he, ok := c.hashes[hash]
 	c.mu.RUnlock()
@@ -161,8 +218,8 @@ func (c *HashMap) HGetAll(hash string) map[string]*fieldEntry {
 	return results
 }
 
-// HScan retrieves all keys from the cache.
-func (c *HashMap) HScan() []string {
+// scanKeys retrieves all keys from the cache.
+func (c *HashMap) scanKeys() []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	keys := make([]string, 0, len(c.hashes))
@@ -196,7 +253,7 @@ func (j *janitor) run(c *HashMap) {
 func (c *HashMap) deleteExpired() {
 	now := time.Now().UnixNano()
 	c.mu.RLock()
-	hashes := c.HScan()
+	hashes := c.scanKeys()
 	c.mu.RUnlock()
 
 	for _, hash := range hashes {
@@ -251,6 +308,8 @@ func NewHashMap(cr *command.CommandRegistry, cleanupInterval time.Duration) *Has
 	cr.Register("HGET", c.HGet)
 	cr.Register("HSET", c.HSet)
 	cr.Register("HDEL", c.HDel)
+	cr.Register("HGETALL", c.HGetAll)
+	cr.Register("HSCAN", c.HScan)
 
 	return c
 }

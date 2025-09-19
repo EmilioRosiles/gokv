@@ -7,7 +7,8 @@ import (
 
 	"gokv/internal/cluster"
 	"gokv/internal/models/peer"
-	clusterpb "gokv/proto"
+	"gokv/internal/response"
+	"gokv/proto/clusterpb"
 
 	"google.golang.org/grpc"
 )
@@ -52,5 +53,11 @@ func (s *clusterNodeServer) RunCommand(ctx context.Context, req *clusterpb.Comma
 	if err != nil {
 		return &clusterpb.CommandResponse{Error: err.Error()}, nil
 	}
-	return &clusterpb.CommandResponse{Data: data}, nil
+
+	resp, err := response.Marshal(data)
+	if err != nil {
+		return &clusterpb.CommandResponse{Error: err.Error()}, nil
+	}
+
+	return resp, nil
 }

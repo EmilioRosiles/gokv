@@ -2,7 +2,6 @@ package cluster
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"math/rand/v2"
@@ -14,7 +13,8 @@ import (
 	"gokv/internal/hashring"
 	"gokv/internal/models/peer"
 	"gokv/internal/pool"
-	clusterpb "gokv/proto"
+	"gokv/internal/response"
+	"gokv/proto/clusterpb"
 
 	"google.golang.org/grpc"
 )
@@ -302,7 +302,7 @@ func (cm *ClusterManager) MergeState(nodes []*clusterpb.Node) {
 // }
 
 // RunCommand executes a command, either locally or by forwarding to the responsible node.
-func (cm *ClusterManager) RunCommand(commandName string, key string, args ...[]byte) ([]byte, error) {
+func (cm *ClusterManager) RunCommand(commandName string, key string, args ...[]byte) (any, error) {
 	responsibleNodeID := cm.GetResponsibleNode(key)
 	if responsibleNodeID == cm.NodeID {
 		// Execute the command locally
@@ -332,9 +332,6 @@ func (cm *ClusterManager) RunCommand(commandName string, key string, args ...[]b
 			log.Printf("Attempting to run command again.")
 			return cm.RunCommand(commandName, key, args...)
 		}
-		if res.Error != "" {
-			return nil, errors.New(res.Error)
-		}
-		return res.Data, nil
+		return response.Unmarshal(res)
 	}
 }

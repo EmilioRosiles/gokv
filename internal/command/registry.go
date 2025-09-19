@@ -5,7 +5,7 @@ import (
 )
 
 // CommandFunc is the type for command handlers.
-type CommandFunc func(key string, args ...[]byte) ([]byte, error)
+type CommandFunc func(key string, args ...[]byte) (any, error)
 
 // CommandRegistry stores and manages command handlers.
 type CommandRegistry struct {
