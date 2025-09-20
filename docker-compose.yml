@@ -18,17 +18,17 @@ services:
       context: ./
       dockerfile: Dockerfile
     environment:
+      NODE_ID: "gokv1"
       HOST: "gokv1"
-      NODE_ID: "node1"
-      GRPC_PORT: 50051
+      PORT: 50051
     
   gokv2:
     <<: *gokv-base
     environment:
+      NODE_ID: "gokv2"
       HOST: "gokv2"
-      NODE_ID: "node2"
-      GRPC_PORT: 50051
-      SEED_NODE_ID: "node1"
+      PORT: 50051
+      SEED_NODE_ID: "gokv1"
       SEED_NODE_ADDR: "gokv1:50051"
     depends_on:
       - gokv1
@@ -36,10 +36,10 @@ services:
   gokv3:
     <<: *gokv-base
     environment:
+      NODE_ID: "gokv3"
       HOST: "gokv3"
-      NODE_ID: "node3"
-      GRPC_PORT: 50051
-      SEED_NODE_ID: "node1"
+      PORT: 50051
+      SEED_NODE_ID: "gokv1"
       SEED_NODE_ADDR: "gokv1:50051"
     depends_on:
       - gokv1

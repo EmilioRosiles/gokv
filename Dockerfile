@@ -21,7 +21,7 @@ FROM alpine:latest
 
 WORKDIR /app
 
-COPY --from=builder /app/gokv .
+COPY --from=builder /app/gokv /app/config.yml .
 
 RUN addgroup -S appgroup 
 RUN adduser -S appuser

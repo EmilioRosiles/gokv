@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"gokv/internal/command"
+	"gokv/internal/context/config"
+	"gokv/internal/context/environment"
 	"gokv/internal/hashmap"
 	"gokv/internal/hashring"
 	"gokv/internal/models/peer"
@@ -17,6 +19,7 @@ import (
 	"gokv/proto/clusterpb"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // ClusterManager manages the cluster state, including node information, peer list, data store, and hash ring.
@@ -32,25 +35,26 @@ type ClusterManager struct {
 }
 
 // NewClusterManager creates and initializes a new ClusterManager.
-func NewClusterManager(nodeID string, nodeAddress string, vNodeCount int, cleanupInterval time.Duration) *ClusterManager {
-	registry := command.NewCommandRegistry()
-	hashMap := hashmap.NewHashMap(registry, 10*time.Second)
+func NewClusterManager(env *environment.Environment, cfg *config.Config) *ClusterManager {
+	cmdRegistry := command.NewCommandRegistry()
+	hashMap := hashmap.NewHashMap(cmdRegistry, cfg.CleanupInterval)
 	peerMap := make(map[string]*peer.Peer)
-	hashRing := hashring.New(vNodeCount, nil)
+	hashRing := hashring.New(cfg.VNodeCount, nil)
 	connPool := pool.NewGrpcConnectionPool(func(address string) (*grpc.ClientConn, error) {
 		return grpc.NewClient(address,
-			grpc.WithConnectParams(grpc.ConnectParams{MinConnectTimeout: 5 * time.Second}),
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithConnectParams(grpc.ConnectParams{MinConnectTimeout: cfg.MessageTimeout}),
 		)
 	})
 
 	cm := &ClusterManager{
-		NodeID:          nodeID,
-		NodeAddr:        nodeAddress,
+		NodeID:          env.NodeID,
+		NodeAddr:        env.Host + ":" + env.Port,
 		PeerMap:         peerMap,
 		HashRing:        hashRing,
 		ConnPool:        connPool,
 		HashMap:         hashMap,
-		CommandRegistry: registry,
+		CommandRegistry: cmdRegistry,
 	}
 
 	cm.HashRing.Add(cm.NodeID)
@@ -174,15 +178,15 @@ func (cm *ClusterManager) GetRandomAlivePeers(num int) []*peer.Peer {
 }
 
 // StartHeartbeat starts the heartbeat process to periodically send heartbeats to other nodes.
-func (cm *ClusterManager) StartHeartbeat() {
-	ticker := time.NewTicker(5 * time.Second) // Heartbeat interval.
+func (cm *ClusterManager) StartHeartbeat(cfg *config.Config) {
+	ticker := time.NewTicker(cfg.HeartbeatInterval) // Heartbeat interval.
 	defer ticker.Stop()
 
 	allPeers := cm.GetRandomAlivePeers(cm.AlivePeers())
 	cm.Heartbeat(allPeers...)
 
 	for range ticker.C {
-		gossipTargets := cm.GetRandomAlivePeers(2) // Number of peers to gossip with.
+		gossipTargets := cm.GetRandomAlivePeers(cfg.GossipPeerCount) // Number of peers to gossip with.
 		go cm.Heartbeat(gossipTargets...)
 	}
 }

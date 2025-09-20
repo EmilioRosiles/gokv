@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"gokv/internal/cluster"
+	"gokv/internal/context/environment"
 	"gokv/internal/models/peer"
 	"gokv/internal/response"
 	"gokv/proto/clusterpb"
@@ -22,8 +23,8 @@ type clusterNodeServer struct {
 
 // StartGrpcServer starts the gRPC server on the specified host and port.
 // It registers the clusterNodeServer implementation with the gRPC server.
-func StartGrpcServer(host string, port string, cm *cluster.ClusterManager) {
-	lis, err := net.Listen("tcp", host+":"+port)
+func StartGrpcServer(env *environment.Environment, cm *cluster.ClusterManager) {
+	lis, err := net.Listen("tcp", env.Host+":"+env.Port)
 	if err != nil {
 		log.Fatalf("gRPC server: could not start listening: %v", err)
 		return
@@ -32,7 +33,7 @@ func StartGrpcServer(host string, port string, cm *cluster.ClusterManager) {
 	grpcServer := grpc.NewServer()
 	serverImplementation := &clusterNodeServer{cm: cm}
 	clusterpb.RegisterClusterNodeServer(grpcServer, serverImplementation)
-	log.Printf("gRPC server: starting on %s:%s", host, port)
+	log.Printf("gRPC server: starting on %s:%s", env.Host, env.Port)
 	grpcServer.Serve(lis)
 }
 
