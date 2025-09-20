@@ -19,6 +19,7 @@ import (
 	"gokv/proto/clusterpb"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
@@ -41,8 +42,16 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 	peerMap := make(map[string]*peer.Peer)
 	hashRing := hashring.New(cfg.VNodeCount, nil)
 	connPool := pool.NewGrpcConnectionPool(func(address string) (*grpc.ClientConn, error) {
+		var err error
+		creds := insecure.NewCredentials()
+		if env.TlsCertPath != "" {
+			creds, err = credentials.NewClientTLSFromFile(env.TlsCertPath, "")
+			if err != nil {
+				log.Fatalf("gRPC server: failed to load TLS credentials: %v", err)
+			}
+		}
 		return grpc.NewClient(address,
-			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithTransportCredentials(creds),
 			grpc.WithConnectParams(grpc.ConnectParams{MinConnectTimeout: cfg.MessageTimeout}),
 		)
 	})

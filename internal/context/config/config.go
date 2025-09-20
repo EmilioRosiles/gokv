@@ -1,6 +1,7 @@
 package config
 
 import (
+	"gokv/internal/context/environment"
 	"log"
 	"os"
 	"time"
@@ -16,11 +17,26 @@ type Config struct {
 	MessageTimeout    time.Duration `yaml:"message_timeout"`
 }
 
-func LoadConfig() *Config {
-	yamlFile, err := os.ReadFile("config.yml")
-	if err != nil {
-		log.Fatalf("Error reading YAML file: %v", err)
+func Default() *Config {
+	return &Config{
+		CleanupInterval:   10 * time.Second,
+		HeartbeatInterval: 5 * time.Second,
+		GossipPeerCount:   2,
+		VNodeCount:        3,
+		MessageTimeout:    5 * time.Second,
 	}
+}
+
+func LoadConfig(env *environment.Environment) *Config {
+	if env.CfgPath == "" {
+		return Default()
+	}
+
+	yamlFile, err := os.ReadFile(env.CfgPath)
+	if err != nil {
+		return Default()
+	}
+
 	var config Config
 	err = yaml.Unmarshal(yamlFile, &config)
 	if err != nil {

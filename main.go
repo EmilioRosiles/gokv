@@ -15,8 +15,8 @@ import (
 // main is the entry point of the gokv application.
 // It initializes the cluster manager, starts the gRPC server, and handles graceful shutdown.
 func main() {
-	cfg := config.LoadConfig()
 	env := environment.LoadEnvironment()
+	cfg := config.LoadConfig(env)
 
 	log.Printf("main: starting node %s", env.NodeID)
 

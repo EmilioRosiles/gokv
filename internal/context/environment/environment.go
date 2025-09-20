@@ -13,26 +13,40 @@ type Environment struct {
 	Port         string
 	SeedNodeID   string
 	SeedNodeAddr string
+	CfgPath      string
+	TlsCertPath  string
+	TlsKeyPath   string
 }
 
 func LoadEnvironment() *Environment {
 	err := godotenv.Load()
 	if err != nil {
-		log.Printf("Error loading .env file, using environment variables: %v", err)
+		log.Printf("Error loading .env file: %v", err)
+	}
+
+	nodeID := os.Getenv("NODE_ID")
+	if nodeID == "" {
+		nodeID = "node1"
 	}
 
 	host := os.Getenv("HOST")
-	port := os.Getenv("PORT")
+	if host == "" {
+		host = "localhost"
+	}
 
-	if host == "" || port == "" {
-		log.Fatalf("Error: HOST, and PORT must be set.")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "50051"
 	}
 
 	return &Environment{
-		NodeID:       os.Getenv("NODE_ID"),
+		NodeID:       nodeID,
 		Host:         host,
 		Port:         port,
 		SeedNodeID:   os.Getenv("SEED_NODE_ID"),
 		SeedNodeAddr: os.Getenv("SEED_NODE_ADDR"),
+		CfgPath:      os.Getenv("CONFIG_PATH"),
+		TlsCertPath:  os.Getenv("TLS_CERT_PATH"),
+		TlsKeyPath:   os.Getenv("TLS_KEY_PATH"),
 	}
 }

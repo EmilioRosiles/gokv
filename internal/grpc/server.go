@@ -12,6 +12,8 @@ import (
 	"gokv/proto/clusterpb"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // clusterNodeServer is the implementation of the ClusterNode gRPC server.
@@ -30,7 +32,15 @@ func StartGrpcServer(env *environment.Environment, cm *cluster.ClusterManager) {
 		return
 	}
 
-	grpcServer := grpc.NewServer()
+	creds := insecure.NewCredentials()
+	if env.TlsCertPath != "" || env.TlsKeyPath != "" {
+		creds, err = credentials.NewServerTLSFromFile(env.TlsCertPath, env.TlsKeyPath)
+		if err != nil {
+			log.Fatalf("gRPC server: failed to load TLS credentials: %v", err)
+		}
+	}
+
+	grpcServer := grpc.NewServer(grpc.Creds(creds))
 	serverImplementation := &clusterNodeServer{cm: cm}
 	clusterpb.RegisterClusterNodeServer(grpcServer, serverImplementation)
 	log.Printf("gRPC server: starting on %s:%s", env.Host, env.Port)

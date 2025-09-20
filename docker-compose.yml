@@ -10,6 +10,9 @@ x-gokv-base: &gokv-base
       reservations:
         cpus: '0.25'
         memory: 128M
+  volumes:
+    - ./certs:/app/certs
+    - ./config.yml:/app/config.yaml
 
 services:
   gokv1:
@@ -21,6 +24,8 @@ services:
       NODE_ID: "gokv1"
       HOST: "gokv1"
       PORT: 50051
+      TLS_CERT_PATH: "certs/server.crt"
+      TLS_KEY_PATH: "certs/server.key"
     
   gokv2:
     <<: *gokv-base
@@ -30,6 +35,8 @@ services:
       PORT: 50051
       SEED_NODE_ID: "gokv1"
       SEED_NODE_ADDR: "gokv1:50051"
+      TLS_CERT_PATH: "certs/server.crt"
+      TLS_KEY_PATH: "certs/server.key"
     depends_on:
       - gokv1
 
@@ -41,6 +48,8 @@ services:
       PORT: 50051
       SEED_NODE_ID: "gokv1"
       SEED_NODE_ADDR: "gokv1:50051"
+      TLS_CERT_PATH: "certs/server.crt"
+      TLS_KEY_PATH: "certs/server.key"
     depends_on:
       - gokv1
 
