@@ -2,15 +2,12 @@
 
 Gokv is a distributed in-memory key-value store written in Go. It is designed to be a simple, highly available, and scalable solution for caching data.
 
-## Features
+## Index
 
-*   **Distributed**: Data is distributed across multiple nodes in the cluster.
-*   **Consistent Hashing**: Uses a consistent hashing algorithm to distribute data, ensuring minimal data movement when nodes are added or removed.
-*   **Peer-to-Peer Communication**: Nodes communicate with each other using gRPC for high-performance communication.
-*   **Gossip Protocol**: Nodes use a gossip protocol to exchange cluster state information, ensuring that all nodes have a consistent view of the cluster.
-*   **Command API**: Provides a simple command-based API for storing and retrieving data.
-*   **Scalability**: New nodes can be added to the cluster to increase capacity and availability.
-*   **Data Rebalancing**: When a new node joins the cluster, data is automatically rebalanced to ensure even distribution.
+*   [Quickstart](#quickstart)
+*   [Configuration](#configuration)
+*   [gRPC API](#grpc-api)
+*   [Architecture](#architecture)
 
 ## Quickstart
 
@@ -38,9 +35,32 @@ Gokv is a distributed in-memory key-value store written in Go. It is designed to
 
     This will start three `gokv` containers, each running a `gokv` node. The nodes will automatically discover each other and form a cluster.
 
-3.  **Interacting with the cluster:**
+### Interacting with the cluster
 
-    You can interact with the cluster by connecting to any of the nodes. For example, to connect to the first node and set a key, you can use a gRPC client.
+    You can interact with the cluster by connecting to any of the nodes. For example, to connect to the first node and set a key, you can use a gRPC client or the CLI tool.
+
+#### CLI Tool
+
+A command-line interface (CLI) tool is available for interacting with the cluster. You can find the source code in `cmd/gokv-cli`.
+
+**Usage:**
+
+```bash
+go run cmd/gokv-cli/main.go <command> [arguments]
+```
+
+**Example:**
+
+```bash
+go run cmd/gokv-cli/main.go HSET myhash mykey myvalue 10s
+```
+
+**Available Commands:**
+
+*   `HGET <key> <field>`: Get the value of a field in a hash.
+*   `HSET <key> <field> <value> [ttl]`: Set the value of a field in a hash. `ttl` is an optional duration (e.g., `10s`, `1m`).
+*   `HDEL <key> <field>`: Delete a hash or field from a hash.
+*   `HGETALL <key>`: Get all the fields and values in a hash.
 
 ### Running with TLS (Optional)
 
@@ -67,6 +87,8 @@ To run the cluster with TLS encryption, you need to generate certificates and co
 
 ## Configuration
 
+### Server Configuration
+
 The following env variables can be used to configure a `gokv` node:
 
 | Variable         | Description                                     |  Default  |
@@ -78,6 +100,17 @@ The following env variables can be used to configure a `gokv` node:
 | `SEED_NODE_ADDR` | The address of a seed node to connect to.       |           |
 | `TLS_CERT_PATH`  | Path to the TLS certificate file.               |           |
 | `TLS_KEY_PATH`   | Path to the TLS key file.                       |           |
+
+### Client Configuration
+
+The following env variables can be used to configure a `gokv` client:
+
+| Variable         | Description                                     |  Default  |
+| ---------------- | ----------------------------------------------- |  -------  |
+| `GOKV_URI`       | The address of a node in the cluster.           |           |
+| `GOKV_CERT`      | Path to the TLS certificate file.               |           |
+
+### Cluster Configuration
 
 The following config variables can be used to configure a `gokv` cluster:
 
@@ -97,6 +130,12 @@ The `gokv` nodes communicate with each other using a gRPC API. The following ser
     *   `Heartbeat`: Used by the nodes to exchange cluster state information.
     *   `RunCommand`: Runs a command in the cluster.
     *   `StreamCommand`: Used for streaming commands.
+
+To regenerate the proto buffer files, run the following command:
+
+```bash
+protoc --go_out=paths=source_relative:. --go-grpc_out=paths=source_relative:. proto/clusterpb/cluster.proto
+```
 
 ## Architecture
 

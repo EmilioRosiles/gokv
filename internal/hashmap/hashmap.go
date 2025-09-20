@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
-	"strconv"
 	"sync"
 	"time"
 
@@ -51,8 +50,12 @@ func (c *HashMap) HGet(hash string, args ...[]byte) (any, error) {
 	entry, ok := he.items[key]
 	he.mu.RUnlock()
 
-	if !ok || entry.ExpiresAt > 0 && time.Now().UnixNano() > entry.ExpiresAt {
+	if !ok {
 		return nil, errors.New("hget: key not found")
+	}
+
+	if entry.ExpiresAt > 0 && time.Now().Unix() > entry.ExpiresAt {
+		return nil, errors.New("hget: key expired")
 	}
 
 	return entry.Data, nil
@@ -70,12 +73,12 @@ func (c *HashMap) HSet(hash string, args ...[]byte) (any, error) {
 	var expiresAt int64 = 0
 	if len(args) == 3 {
 		var err error
-		ttl, err := strconv.ParseInt(string(args[2]), 10, 64)
+		ttl, err := time.ParseDuration(string(args[2]))
 		if err != nil {
 			return nil, fmt.Errorf("hset: invalid TTL: %w", err)
 		}
 		if ttl > 0 {
-			expiresAt = time.Now().Unix() + ttl
+			expiresAt = time.Now().Add(ttl).Unix()
 		}
 	}
 
@@ -163,7 +166,7 @@ func (c *HashMap) HGetAll(hash string, args ...[]byte) (any, error) {
 	}
 
 	for key, entry := range he.items {
-		if entry.ExpiresAt > 0 && time.Now().UnixNano() > entry.ExpiresAt {
+		if entry.ExpiresAt > 0 && time.Now().Unix() > entry.ExpiresAt {
 			continue
 		}
 		kvList.List = append(kvList.List, &clusterpb.KeyValue{Key: key, Value: entry.Data})
@@ -212,7 +215,7 @@ func (j *janitor) run(c *HashMap) {
 
 // deleteExpired iterates through the cache and removes expired items.
 func (c *HashMap) deleteExpired() {
-	now := time.Now().UnixNano()
+	now := time.Now().Unix()
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
