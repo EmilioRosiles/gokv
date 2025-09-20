@@ -37,7 +37,7 @@ Gokv is a distributed in-memory key-value store written in Go. It is designed to
 
 ### Interacting with the cluster
 
-    You can interact with the cluster by connecting to any of the nodes. For example, to connect to the first node and set a key, you can use a gRPC client or the CLI tool.
+You can interact with the cluster by connecting to any of the nodes. For example, to connect to the first node and set a key, you can use a gRPC client or the CLI tool.
 
 #### CLI Tool
 
