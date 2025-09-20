@@ -79,7 +79,7 @@ func (s *clusterNodeServer) Heartbeat(ctx context.Context, req *clusterpb.Heartb
 // It executes the command using the ClusterManager and returns the result.
 func (s *clusterNodeServer) RunCommand(ctx context.Context, req *clusterpb.CommandRequest) (*clusterpb.CommandResponse, error) {
 	log.Printf("gRPC server: received command '%s' for key '%s'", req.Command, req.Key)
-	data, err := s.cm.RunCommand(req.Command, req.Key, req.Args...)
+	data, err := s.cm.RunCommand(ctx, req.Command, req.Key, req.Args...)
 	if err != nil {
 		return &clusterpb.CommandResponse{Error: err.Error()}, nil
 	}
@@ -103,7 +103,7 @@ func (s *clusterNodeServer) StreamCommand(stream clusterpb.ClusterNode_StreamCom
 		}
 
 		log.Printf("gRPC server: received stream command '%s' for key '%s'", req.Command, req.Key)
-		data, err := s.cm.RunCommand(req.Command, req.Key, req.Args...)
+		data, err := s.cm.RunCommand(stream.Context(), req.Command, req.Key, req.Args...)
 		if err != nil {
 			log.Printf("gRPC server: error running stream command: %v", err)
 			return err

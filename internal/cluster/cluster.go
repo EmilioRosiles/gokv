@@ -340,7 +340,7 @@ func (cm *ClusterManager) Rebalance() {
 }
 
 // RunCommand executes a command, either locally or by forwarding it to the responsible node.
-func (cm *ClusterManager) RunCommand(commandName string, key string, args ...[]byte) (any, error) {
+func (cm *ClusterManager) RunCommand(ctx context.Context, commandName string, key string, args ...[]byte) (any, error) {
 	responsibleNodeID := cm.GetResponsibleNode(key)
 	if responsibleNodeID == cm.NodeID {
 		// Execute the command locally.
@@ -356,7 +356,7 @@ func (cm *ClusterManager) RunCommand(commandName string, key string, args ...[]b
 			log.Printf("cluster manager: failed to get client for node %s", responsibleNodeID)
 			cm.RemoveNode(responsibleNodeID)
 			log.Printf("cluster manager: attempting to run command again")
-			return cm.RunCommand(commandName, key, args...)
+			return cm.RunCommand(ctx, commandName, key, args...)
 		}
 		req := &clusterpb.CommandRequest{
 			Command: commandName,
@@ -368,7 +368,7 @@ func (cm *ClusterManager) RunCommand(commandName string, key string, args ...[]b
 			log.Printf("cluster manager: failed to forward command to node %s: %v", responsibleNodeID, err)
 			cm.RemoveNode(responsibleNodeID)
 			log.Printf("cluster manager: attempting to run command again")
-			return cm.RunCommand(commandName, key, args...)
+			return cm.RunCommand(ctx, commandName, key, args...)
 		}
 		return response.Unmarshal(res)
 	}
