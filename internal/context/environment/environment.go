@@ -18,6 +18,7 @@ type Environment struct {
 	TlsKeyPath   string
 }
 
+// LoadEnvironment loads the environment variables from the .env file and the system.
 func LoadEnvironment() *Environment {
 	err := godotenv.Load()
 	if err != nil {

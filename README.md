@@ -42,6 +42,29 @@ Gokv is a distributed in-memory key-value store written in Go. It is designed to
 
     You can interact with the cluster by connecting to any of the nodes. For example, to connect to the first node and set a key, you can use a gRPC client.
 
+### Running with TLS (Optional)
+
+To run the cluster with TLS encryption, you need to generate certificates and configure the nodes to use them.
+
+1.  **Generate certificates:**
+
+    Run the following script to generate the necessary TLS certificates:
+
+    ```bash
+    ./certs.sh
+    ```
+
+    This will create a `certs` directory containing the server certificate and key.
+
+2.  **Configure TLS:**
+
+    You can configure the nodes to use TLS by setting the following environment variables:
+
+    *   `TLS_CERT_PATH`: Path to the server certificate file (e.g., `certs/server.crt`).
+    *   `TLS_KEY_PATH`: Path to the server key file (e.g., `certs/server.key`).
+
+    You can set these variables in a `.env` file or directly in the `docker-compose.yml` file.
+
 ## Configuration
 
 The following env variables can be used to configure a `gokv` node:
@@ -53,6 +76,8 @@ The following env variables can be used to configure a `gokv` node:
 | `PORT`           | The port to listen on for gRPC connections.     | `8080`    |
 | `SEED_NODE_ID`   | The ID of a seed node to connect to.            |           |
 | `SEED_NODE_ADDR` | The address of a seed node to connect to.       |           |
+| `TLS_CERT_PATH`  | Path to the TLS certificate file.               |           |
+| `TLS_KEY_PATH`   | Path to the TLS key file.                       |           |
 
 The following config variables can be used to configure a `gokv` cluster:
 

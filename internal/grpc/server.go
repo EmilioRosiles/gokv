@@ -34,6 +34,7 @@ func StartGrpcServer(env *environment.Environment, cm *cluster.ClusterManager) {
 
 	creds := insecure.NewCredentials()
 	if env.TlsCertPath != "" || env.TlsKeyPath != "" {
+		log.Println("gRPC server: attempting to start with TLS")
 		creds, err = credentials.NewServerTLSFromFile(env.TlsCertPath, env.TlsKeyPath)
 		if err != nil {
 			log.Fatalf("gRPC server: failed to load TLS credentials: %v", err)

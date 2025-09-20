@@ -28,19 +28,26 @@ func Default() *Config {
 }
 
 func LoadConfig(env *environment.Environment) *Config {
+	// If no config path is provided, load the default configuration.
 	if env.CfgPath == "" {
+		log.Println("config: loading default configuration")
 		return Default()
 	}
 
+	// Read the YAML file.
 	yamlFile, err := os.ReadFile(env.CfgPath)
 	if err != nil {
+		log.Printf("config: could not read config file, loading default configuration: %v", err)
 		return Default()
 	}
 
+	// Unmarshal the YAML file into the Config struct.
 	var config Config
 	err = yaml.Unmarshal(yamlFile, &config)
 	if err != nil {
-		log.Fatalf("Error unmarshalling YAML: %v", err)
+		log.Fatalf("config: error unmarshalling YAML: %v", err)
 	}
+
+	log.Println("config: loaded configuration from", env.CfgPath)
 	return &config
 }

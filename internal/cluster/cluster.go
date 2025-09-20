@@ -45,6 +45,7 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 		var err error
 		creds := insecure.NewCredentials()
 		if env.TlsCertPath != "" {
+			log.Println("cluster manager: attempting to start with TLS")
 			creds, err = credentials.NewClientTLSFromFile(env.TlsCertPath, "")
 			if err != nil {
 				log.Fatalf("gRPC server: failed to load TLS credentials: %v", err)
