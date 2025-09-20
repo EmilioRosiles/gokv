@@ -285,7 +285,7 @@ func (cm *ClusterManager) Rebalance() {
 				args := make([][]byte, 0)
 				args = append(args, []byte(key))
 				args = append(args, value.Data)
-				args = append(args, []byte(fmt.Sprintf("%d", ttl)))
+				args = append(args, fmt.Appendf(nil, "%d", ttl))
 
 				req := &clusterpb.CommandRequest{
 					Command: "HSET",
