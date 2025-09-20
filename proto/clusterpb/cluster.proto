@@ -48,10 +48,10 @@ message CommandRequest {
 message CommandResponse {
   string error = 1;
   oneof response {
-    bytes value = 2;        // For single value responses (e.g., HGET)
-    bool success = 3;       // For simple ack responses (e.g., HDEL, HSET)
-    int64 count = 4;        // For counts
-    KeyValueList list = 5;  // For key/value lists (e.g., HGETALL)
-    KeyValueMap map = 6;    // For key/value maps (e.g., HSCAN)
+    bytes value = 2;        // For single value responses (e.g., `HGET hash field`)
+    bool success = 3;       // For simple ack responses (e.g. `HSET`)
+    int64 count = 4;        // For counts (e.g. `HDEL`)
+    KeyValueList list = 5;  // For key/value lists (e.g., `HGET hash` or `HGET hash field1 field2` )
+    KeyValueMap map = 6;    // For key/value maps
   }
 }

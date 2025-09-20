@@ -494,23 +494,23 @@ type isCommandResponse_Response interface {
 }
 
 type CommandResponse_Value struct {
-	Value []byte `protobuf:"bytes,2,opt,name=value,proto3,oneof"` // For single value responses (e.g., HGET)
+	Value []byte `protobuf:"bytes,2,opt,name=value,proto3,oneof"` // For single value responses (e.g., `HGET hash field`)
 }
 
 type CommandResponse_Success struct {
-	Success bool `protobuf:"varint,3,opt,name=success,proto3,oneof"` // For simple ack responses (e.g., HDEL, HSET)
+	Success bool `protobuf:"varint,3,opt,name=success,proto3,oneof"` // For simple ack responses (e.g. `HSET`)
 }
 
 type CommandResponse_Count struct {
-	Count int64 `protobuf:"varint,4,opt,name=count,proto3,oneof"` // For counts
+	Count int64 `protobuf:"varint,4,opt,name=count,proto3,oneof"` // For counts (e.g. `HDEL`)
 }
 
 type CommandResponse_List struct {
-	List *KeyValueList `protobuf:"bytes,5,opt,name=list,proto3,oneof"` // For key/value lists (e.g., HGETALL)
+	List *KeyValueList `protobuf:"bytes,5,opt,name=list,proto3,oneof"` // For key/value lists (e.g., `HGET hash` or `HGET hash field1 field2` )
 }
 
 type CommandResponse_Map struct {
-	Map *KeyValueMap `protobuf:"bytes,6,opt,name=map,proto3,oneof"` // For key/value maps (e.g., HSCAN)
+	Map *KeyValueMap `protobuf:"bytes,6,opt,name=map,proto3,oneof"` // For key/value maps
 }
 
 func (*CommandResponse_Value) isCommandResponse_Response() {}

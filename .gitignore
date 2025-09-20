@@ -1,3 +1,4 @@
 .env
 gokv
+gokv-cli
 certs/

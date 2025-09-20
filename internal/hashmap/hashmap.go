@@ -33,11 +33,6 @@ type HashMap struct {
 // HGet retrieves a field from a hash.
 // It returns the data if the field exists and has not expired.
 func (c *HashMap) HGet(hash string, args ...[]byte) (any, error) {
-	if len(args) != 1 {
-		return nil, errors.New("hget: requires 1 argument: key")
-	}
-	key := string(args[0])
-
 	c.mu.RLock()
 	he, ok := c.hashes[hash]
 	c.mu.RUnlock()
@@ -47,18 +42,45 @@ func (c *HashMap) HGet(hash string, args ...[]byte) (any, error) {
 	}
 
 	he.mu.RLock()
-	entry, ok := he.items[key]
-	he.mu.RUnlock()
+	defer he.mu.RUnlock()
 
-	if !ok {
-		return nil, errors.New("hget: key not found")
+	if len(args) == 0 {
+		kvList := &clusterpb.KeyValueList{
+			List: make([]*clusterpb.KeyValue, 0),
+		}
+
+		for key, entry := range he.items {
+			if entry.ExpiresAt > 0 && time.Now().Unix() > entry.ExpiresAt {
+				continue
+			}
+			kvList.List = append(kvList.List, &clusterpb.KeyValue{Key: key, Value: entry.Data})
+		}
+
+		return kvList, nil
 	}
 
-	if entry.ExpiresAt > 0 && time.Now().Unix() > entry.ExpiresAt {
-		return nil, errors.New("hget: key expired")
+	if len(args) == 1 {
+		entry, ok := he.items[string(args[0])]
+		if !ok || entry.ExpiresAt > 0 && time.Now().Unix() > entry.ExpiresAt {
+			return nil, errors.New("hget: key not found")
+		}
+
+		return entry.Data, nil
 	}
 
-	return entry.Data, nil
+	kvList := &clusterpb.KeyValueList{
+		List: make([]*clusterpb.KeyValue, 0),
+	}
+
+	for _, arg := range args {
+		key := string(arg)
+		entry, ok := he.items[key]
+		if !ok || entry.ExpiresAt > 0 && time.Now().Unix() > entry.ExpiresAt {
+			continue
+		}
+		kvList.List = append(kvList.List, &clusterpb.KeyValue{Key: key, Value: entry.Data})
+	}
+	return kvList, nil
 }
 
 // HSet sets a field in a hash to a given value with a specific TTL.
@@ -142,37 +164,6 @@ func (c *HashMap) HDel(hash string, args ...[]byte) (any, error) {
 	}
 
 	return int64(deletedCount), nil
-}
-
-// HGetAll retrieves all fields and values from a hash.
-func (c *HashMap) HGetAll(hash string, args ...[]byte) (any, error) {
-	if len(args) != 0 {
-		return nil, errors.New("hgetall: does not take any arguments")
-	}
-
-	c.mu.RLock()
-	he, ok := c.hashes[hash]
-	c.mu.RUnlock()
-
-	if !ok {
-		return &clusterpb.KeyValueList{List: []*clusterpb.KeyValue{}}, nil
-	}
-
-	he.mu.RLock()
-	defer he.mu.RUnlock()
-
-	kvList := &clusterpb.KeyValueList{
-		List: make([]*clusterpb.KeyValue, 0),
-	}
-
-	for key, entry := range he.items {
-		if entry.ExpiresAt > 0 && time.Now().Unix() > entry.ExpiresAt {
-			continue
-		}
-		kvList.List = append(kvList.List, &clusterpb.KeyValue{Key: key, Value: entry.Data})
-	}
-
-	return kvList, nil
 }
 
 // GetAllData returns all the data in the hashmap.
@@ -259,7 +250,6 @@ func NewHashMap(cr *command.CommandRegistry, cleanupInterval time.Duration) *Has
 	cr.Register("HGET", c.HGet)
 	cr.Register("HSET", c.HSet)
 	cr.Register("HDEL", c.HDel)
-	cr.Register("HGETALL", c.HGetAll)
 
 	return c
 }

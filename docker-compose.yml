@@ -20,6 +20,8 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile
+    ports:
+      - "50051:50051"
     environment:
       NODE_ID: "gokv1"
       HOST: "gokv1"

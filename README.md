@@ -57,10 +57,9 @@ go run cmd/gokv-cli/main.go HSET myhash mykey myvalue 10s
 
 **Available Commands:**
 
-*   `HGET <key> <field>`: Get the value of a field in a hash.
+*   `HGET <key> <field>`: Get the a hash or field/s in a hash.
 *   `HSET <key> <field> <value> [ttl]`: Set the value of a field in a hash. `ttl` is an optional duration (e.g., `10s`, `1m`).
-*   `HDEL <key> <field>`: Delete a hash or field from a hash.
-*   `HGETALL <key>`: Get all the fields and values in a hash.
+*   `HDEL <key> <field>`: Delete a hash or field/s from a hash.
 
 ### Running with TLS (Optional)
 
