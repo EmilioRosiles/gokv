@@ -1,8 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"gokv/internal/context/environment"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -30,14 +31,14 @@ func Default() *Config {
 func LoadConfig(env *environment.Environment) *Config {
 	// If no config path is provided, load the default configuration.
 	if env.CfgPath == "" {
-		log.Println("config: loading default configuration")
+		slog.Debug("config: loading default configuration")
 		return Default()
 	}
 
 	// Read the YAML file.
 	yamlFile, err := os.ReadFile(env.CfgPath)
 	if err != nil {
-		log.Printf("config: could not read config file, loading default configuration: %v", err)
+		slog.Warn(fmt.Sprintf("config: could not read config file, loading default configuration: %v", err))
 		return Default()
 	}
 
@@ -45,9 +46,10 @@ func LoadConfig(env *environment.Environment) *Config {
 	var config Config
 	err = yaml.Unmarshal(yamlFile, &config)
 	if err != nil {
-		log.Fatalf("config: error unmarshalling YAML: %v", err)
+		slog.Error(fmt.Sprintf("config: error unmarshalling YAML: %v", err))
+		os.Exit(1)
 	}
 
-	log.Println("config: loaded configuration from", env.CfgPath)
+	slog.Info(fmt.Sprintf("config: loaded configuration from: %s", env.CfgPath))
 	return &config
 }

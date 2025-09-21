@@ -1,7 +1,8 @@
 package environment
 
 import (
-	"log"
+	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -22,7 +23,7 @@ type Environment struct {
 func LoadEnvironment() *Environment {
 	err := godotenv.Load()
 	if err != nil {
-		log.Printf("Error loading .env file: %v", err)
+		slog.Warn(fmt.Sprintf("environment: error loading .env file: %v", err))
 	}
 
 	nodeID := os.Getenv("NODE_ID")

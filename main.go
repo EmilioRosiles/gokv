@@ -1,7 +1,8 @@
 package main
 
 import (
-	"log"
+	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,10 +16,12 @@ import (
 // main is the entry point of the gokv application.
 // It initializes the cluster manager, starts the gRPC server, and handles graceful shutdown.
 func main() {
-	env := environment.LoadEnvironment()
-	cfg := config.LoadConfig(env)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	slog.SetDefault(logger)
 
-	log.Printf("main: starting node %s", env.NodeID)
+	env := environment.LoadEnvironment()
+	slog.Info(fmt.Sprintf("main: starting node: %s", env.NodeID))
+	cfg := config.LoadConfig(env)
 
 	// Create a new cluster manager.
 	cm := cluster.NewClusterManager(env, cfg)
@@ -42,5 +45,5 @@ func main() {
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 
 	<-stop
-	log.Printf("main: shutting down node %s", env.NodeID)
+	slog.Info(fmt.Sprintf("main: shutting down node: %s", env.NodeID))
 }
