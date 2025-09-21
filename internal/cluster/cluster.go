@@ -200,7 +200,12 @@ func (cm *ClusterManager) StartHeartbeat(cfg *config.Config) {
 
 	for range ticker.C {
 		gossipTargets := cm.GetRandomAlivePeers(cfg.GossipPeerCount) // Number of peers to gossip with.
-		go cm.Heartbeat(gossipTargets...)
+		prev, _ := cm.HashRing.GetVersion()
+		cm.Heartbeat(gossipTargets...)
+		next, _ := cm.HashRing.GetVersion()
+		if next != prev {
+			go cm.Rebalance()
+		}
 	}
 }
 
@@ -212,7 +217,6 @@ func (cm *ClusterManager) Heartbeat(peerList ...*peer.Peer) {
 	}
 
 	slog.Debug(fmt.Sprintf("cluster manager: sending heartbeat to %d peers", len(peerList)))
-	prev, _ := cm.HashRing.GetVersion()
 	for _, peerToCheck := range peerList {
 		client, ok := cm.GetPeerClient(peerToCheck.NodeID)
 		if !ok {
@@ -240,10 +244,6 @@ func (cm *ClusterManager) Heartbeat(peerList ...*peer.Peer) {
 			slog.Debug(fmt.Sprintf("cluster manager: heartbeat check successful for peer %s", peerToCheck.NodeID))
 			cm.MergeState(res.Peers)
 		}
-	}
-	next, _ := cm.HashRing.GetVersion()
-	if next != prev {
-		go cm.Rebalance()
 	}
 }
 
