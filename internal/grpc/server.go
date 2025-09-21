@@ -57,17 +57,20 @@ func StartGrpcServer(env *environment.Environment, cm *cluster.ClusterManager) {
 func (s *clusterNodeServer) Heartbeat(ctx context.Context, req *clusterpb.HeartbeatRequest) (*clusterpb.HeartbeatResponse, error) {
 	if req.Self != nil {
 		slog.Debug(fmt.Sprintf("gRPC server: received heartbeat from node %s", req.Self.NodeId))
+		prev, _ := s.cm.HashRing.GetVersion()
+
 		s.cm.MergeState(append(req.Peers, req.Self))
+
+		next, _ := s.cm.HashRing.GetVersion()
+		if next != prev {
+			go s.cm.Rebalance()
+		}
 	} else {
 		slog.Debug("gRPC server: received heartbeat from client")
 	}
 	peerspb := make([]*clusterpb.Node, 0)
-	peerspb = append(peerspb, peer.ToProto(peer.Peer{
-		NodeID:   s.cm.NodeID,
-		NodeAddr: s.cm.NodeAddr,
-		Alive:    true,
-		LastSeen: time.Now(),
-	}))
+	self := &clusterpb.Node{NodeId: s.cm.NodeID, NodeAddr: s.cm.NodeAddr, Alive: true, LastSeen: time.Now().Unix()}
+	peerspb = append(peerspb, self)
 	s.cm.Mu.RLock()
 	for _, peerToAdd := range s.cm.PeerMap {
 		peerspb = append(peerspb, peer.ToProto(*peerToAdd))

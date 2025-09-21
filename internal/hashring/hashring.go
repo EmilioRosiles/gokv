@@ -1,7 +1,11 @@
 package hashring
 
 import (
+	"encoding/binary"
+	"fmt"
 	"hash/crc32"
+	"hash/fnv"
+	"log/slog"
 	"sort"
 	"strconv"
 	"sync"
@@ -80,4 +84,26 @@ func (h *HashRing) Get(nodeID string) string {
 		idx = 0
 	}
 	return h.hashMap[h.keys[idx]]
+}
+
+// GetVersion returns a hash of all the alive peers in the cluster.
+func (h *HashRing) GetVersion() (uint64, error) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	if len(h.keys) == 0 {
+		slog.Warn("hash ring: error computing hash ring version: no keys found")
+		return 0, nil
+	}
+
+	hasher := fnv.New64a()
+	for _, key := range h.keys {
+		err := binary.Write(hasher, binary.BigEndian, int64(key))
+		if err != nil {
+			slog.Warn(fmt.Sprintf("hash ring: error computing hash ring version: %v", err))
+			return 0, err
+		}
+	}
+
+	return hasher.Sum64(), nil
 }

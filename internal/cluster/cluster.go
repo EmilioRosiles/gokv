@@ -100,7 +100,6 @@ func (cm *ClusterManager) AddNode(nodeID string, addr string) {
 		slog.Info(fmt.Sprintf("cluster manager: added new peer to cluster: %s", nodeID))
 		localNode.Alive = true
 		cm.HashRing.Add(nodeID)
-		go cm.Rebalance()
 	}
 
 	cm.PeerMap[nodeID] = localNode
@@ -211,6 +210,7 @@ func (cm *ClusterManager) Heartbeat(peerList ...*peer.Peer) {
 	}
 
 	slog.Debug(fmt.Sprintf("cluster manager: sending heartbeat to %d peers", len(peerList)))
+	prev, _ := cm.HashRing.GetVersion()
 	for _, peerToCheck := range peerList {
 		client, ok := cm.GetPeerClient(peerToCheck.NodeID)
 		if !ok {
@@ -243,6 +243,10 @@ func (cm *ClusterManager) Heartbeat(peerList ...*peer.Peer) {
 			cm.MergeState(res.Peers)
 		}
 		cancel()
+	}
+	next, _ := cm.HashRing.GetVersion()
+	if next != prev {
+		go cm.Rebalance()
 	}
 }
 
