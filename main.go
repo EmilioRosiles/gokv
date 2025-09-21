@@ -16,7 +16,7 @@ import (
 // main is the entry point of the gokv application.
 // It initializes the cluster manager, starts the gRPC server, and handles graceful shutdown.
 func main() {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
 
 	env := environment.LoadEnvironment()

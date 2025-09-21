@@ -16,6 +16,7 @@ type Config struct {
 	GossipPeerCount   int           `yaml:"gossip_peer_count"`
 	VNodeCount        int           `yaml:"v_node_count"`
 	MessageTimeout    time.Duration `yaml:"message_timeout"`
+	Replicas          int           `yaml:"replicas"`
 }
 
 func Default() *Config {
@@ -25,6 +26,7 @@ func Default() *Config {
 		GossipPeerCount:   2,
 		VNodeCount:        3,
 		MessageTimeout:    5 * time.Second,
+		Replicas:          1,
 	}
 }
 

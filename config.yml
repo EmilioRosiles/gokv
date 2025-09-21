@@ -3,3 +3,4 @@ heartbeat_interval: 5s
 gossip_peer_count: 2
 v_node_count: 3
 message_timeout: 5s
+replicas: 2

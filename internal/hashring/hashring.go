@@ -19,14 +19,16 @@ type HashRing struct {
 	mu         sync.RWMutex
 	hash       HashFunc
 	vNodeCount int
+	replicas   int
 	keys       []int
 	hashMap    map[int]string
 }
 
 // Creates new hashring
-func New(vNodeCount int, fn HashFunc) *HashRing {
+func New(vNodeCount int, replicas int, fn HashFunc) *HashRing {
 	h := &HashRing{
 		vNodeCount: vNodeCount,
+		replicas:   replicas,
 		hash:       fn,
 		hashMap:    make(map[int]string),
 	}
@@ -69,11 +71,11 @@ func (h *HashRing) Remove(nodeID string) {
 }
 
 // Get ID of the responsible node for a key
-func (h *HashRing) Get(nodeID string) string {
+func (h *HashRing) Get(nodeID string) []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if len(h.keys) == 0 {
-		return ""
+		return []string{}
 	}
 
 	hash := int(h.hash([]byte(nodeID)))
@@ -83,7 +85,16 @@ func (h *HashRing) Get(nodeID string) string {
 	if idx == len(h.keys) {
 		idx = 0
 	}
-	return h.hashMap[h.keys[idx]]
+
+	nodes := make([]string, 0, h.replicas)
+	for i := idx; len(nodes) < h.replicas && len(nodes) < len(h.keys); i++ {
+		if i == len(h.keys) {
+			i = 0
+		}
+		nodes = append(nodes, h.hashMap[h.keys[i]])
+	}
+
+	return nodes
 }
 
 // GetVersion returns a hash of all the alive peers in the cluster.

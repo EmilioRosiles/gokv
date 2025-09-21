@@ -41,7 +41,7 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 	cmdRegistry := command.NewCommandRegistry()
 	hashMap := hashmap.NewHashMap(cmdRegistry, cfg.CleanupInterval)
 	peerMap := make(map[string]*peer.Peer)
-	hashRing := hashring.New(cfg.VNodeCount, nil)
+	hashRing := hashring.New(cfg.VNodeCount, cfg.Replicas, nil)
 	connPool := pool.NewGrpcConnectionPool(func(address string) (*grpc.ClientConn, error) {
 		var err error
 		creds := insecure.NewCredentials()
@@ -142,9 +142,11 @@ func (cm *ClusterManager) GetPeerClient(nodeID string) (clusterpb.ClusterNodeCli
 	return clusterpb.NewClusterNodeClient(conn), true
 }
 
-// GetResponsibleNode returns the ID of the node responsible for a given key.
+// GetResponsibleNodes returns the IDs of the nodes responsible for a given key.
 func (cm *ClusterManager) GetResponsibleNode(key string) string {
-	return cm.HashRing.Get(key)
+	nodes := cm.HashRing.Get(key)
+	slog.Info(fmt.Sprintf("responsible nodes: %v", nodes))
+	return nodes[0]
 }
 
 // AlivePeers returns the number of alive peers in the cluster.
@@ -221,17 +223,16 @@ func (cm *ClusterManager) Heartbeat(peerList ...*peer.Peer) {
 
 		cm.Mu.RLock()
 		self := &clusterpb.Node{NodeId: cm.NodeID, NodeAddr: cm.NodeAddr, Alive: true, LastSeen: time.Now().Unix()}
-		peerspb := make([]*clusterpb.Node, 0, len(cm.PeerMap)+1)
+		peerspb := make([]*clusterpb.Node, 0)
 		peerspb = append(peerspb, self)
 		for _, peerToAdd := range cm.PeerMap {
 			peerspb = append(peerspb, peer.ToProto(*peerToAdd))
 		}
 		cm.Mu.RUnlock()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		req := &clusterpb.HeartbeatRequest{Peers: peerspb}
 
-		res, err := client.Heartbeat(ctx, req)
+		res, err := client.Heartbeat(context.Background(), req)
 		if err != nil {
 			slog.Warn(fmt.Sprintf("cluster manager: heartbeat failed for peer %s, removing from cluster: %v", peerToCheck.NodeID, err))
 			cm.RemoveNode(peerToCheck.NodeID)
@@ -239,7 +240,6 @@ func (cm *ClusterManager) Heartbeat(peerList ...*peer.Peer) {
 			slog.Debug(fmt.Sprintf("cluster manager: heartbeat check successful for peer %s", peerToCheck.NodeID))
 			cm.MergeState(res.Peers)
 		}
-		cancel()
 	}
 	next, _ := cm.HashRing.GetVersion()
 	if next != prev {
