@@ -52,21 +52,19 @@ func StartGrpcServer(env *environment.Environment, cm *cluster.ClusterManager) {
 // Heartbeat handles incoming heartbeat requests from other nodes in the cluster.
 // It merges the state of the incoming node and its peers with the current node's state.
 func (s *clusterNodeServer) Heartbeat(ctx context.Context, req *clusterpb.HeartbeatRequest) (*clusterpb.HeartbeatResponse, error) {
-	peerspb := make([]*clusterpb.Node, 0)
 	if req.Self != nil {
 		log.Printf("gRPC server: received heartbeat from node %s", req.Self.NodeId)
 		s.cm.MergeState(append(req.Peers, req.Self))
 	} else {
 		log.Printf("gRPC server: received heartbeat from client")
-		self := peer.Peer{
-			NodeID:   s.cm.NodeID,
-			NodeAddr: s.cm.NodeAddr,
-			Alive:    true,
-			LastSeen: time.Now(),
-		}
-		peerspb = append(peerspb, peer.ToProto(self))
 	}
-
+	peerspb := make([]*clusterpb.Node, 0)
+	peerspb = append(peerspb, peer.ToProto(peer.Peer{
+		NodeID:   s.cm.NodeID,
+		NodeAddr: s.cm.NodeAddr,
+		Alive:    true,
+		LastSeen: time.Now(),
+	}))
 	s.cm.Mu.RLock()
 	for _, peerToAdd := range s.cm.PeerMap {
 		peerspb = append(peerspb, peer.ToProto(*peerToAdd))
