@@ -18,8 +18,7 @@ message Node {
 }
 
 message HeartbeatRequest {
-  Node self = 1;
-  repeated Node peers = 2;
+  repeated Node peers = 1;
 }
 
 message HeartbeatResponse {

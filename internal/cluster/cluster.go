@@ -219,20 +219,17 @@ func (cm *ClusterManager) Heartbeat(peerList ...*peer.Peer) {
 			continue
 		}
 
-		self := &clusterpb.Node{NodeId: cm.NodeID, NodeAddr: cm.NodeAddr, Alive: true, LastSeen: time.Now().Unix()}
-
 		cm.Mu.RLock()
-		peerspb := make([]*clusterpb.Node, 0, len(cm.PeerMap))
+		self := &clusterpb.Node{NodeId: cm.NodeID, NodeAddr: cm.NodeAddr, Alive: true, LastSeen: time.Now().Unix()}
+		peerspb := make([]*clusterpb.Node, 0, len(cm.PeerMap)+1)
+		peerspb = append(peerspb, self)
 		for _, peerToAdd := range cm.PeerMap {
 			peerspb = append(peerspb, peer.ToProto(*peerToAdd))
 		}
 		cm.Mu.RUnlock()
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		req := &clusterpb.HeartbeatRequest{
-			Self:  self,
-			Peers: peerspb,
-		}
+		req := &clusterpb.HeartbeatRequest{Peers: peerspb}
 
 		res, err := client.Heartbeat(ctx, req)
 		if err != nil {

@@ -91,8 +91,7 @@ func (x *Node) GetLastSeen() int64 {
 
 type HeartbeatRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Self          *Node                  `protobuf:"bytes,1,opt,name=self,proto3" json:"self,omitempty"`
-	Peers         []*Node                `protobuf:"bytes,2,rep,name=peers,proto3" json:"peers,omitempty"`
+	Peers         []*Node                `protobuf:"bytes,1,rep,name=peers,proto3" json:"peers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -125,13 +124,6 @@ func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use HeartbeatRequest.ProtoReflect.Descriptor instead.
 func (*HeartbeatRequest) Descriptor() ([]byte, []int) {
 	return file_proto_clusterpb_cluster_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *HeartbeatRequest) GetSelf() *Node {
-	if x != nil {
-		return x.Self
-	}
-	return nil
 }
 
 func (x *HeartbeatRequest) GetPeers() []*Node {
@@ -532,10 +524,9 @@ const file_proto_clusterpb_cluster_proto_rawDesc = "" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x1b\n" +
 	"\tnode_addr\x18\x02 \x01(\tR\bnodeAddr\x12\x14\n" +
 	"\x05alive\x18\x03 \x01(\bR\x05alive\x12\x1b\n" +
-	"\tlast_seen\x18\x04 \x01(\x03R\blastSeen\"^\n" +
-	"\x10HeartbeatRequest\x12#\n" +
-	"\x04self\x18\x01 \x01(\v2\x0f.clusterpb.NodeR\x04self\x12%\n" +
-	"\x05peers\x18\x02 \x03(\v2\x0f.clusterpb.NodeR\x05peers\":\n" +
+	"\tlast_seen\x18\x04 \x01(\x03R\blastSeen\"9\n" +
+	"\x10HeartbeatRequest\x12%\n" +
+	"\x05peers\x18\x01 \x03(\v2\x0f.clusterpb.NodeR\x05peers\":\n" +
 	"\x11HeartbeatResponse\x12%\n" +
 	"\x05peers\x18\x01 \x03(\v2\x0f.clusterpb.NodeR\x05peers\"2\n" +
 	"\bKeyValue\x12\x10\n" +
@@ -592,25 +583,24 @@ var file_proto_clusterpb_cluster_proto_goTypes = []any{
 	nil,                       // 8: clusterpb.KeyValueMap.MapEntry
 }
 var file_proto_clusterpb_cluster_proto_depIdxs = []int32{
-	0,  // 0: clusterpb.HeartbeatRequest.self:type_name -> clusterpb.Node
-	0,  // 1: clusterpb.HeartbeatRequest.peers:type_name -> clusterpb.Node
-	0,  // 2: clusterpb.HeartbeatResponse.peers:type_name -> clusterpb.Node
-	3,  // 3: clusterpb.KeyValueList.list:type_name -> clusterpb.KeyValue
-	8,  // 4: clusterpb.KeyValueMap.map:type_name -> clusterpb.KeyValueMap.MapEntry
-	4,  // 5: clusterpb.CommandResponse.list:type_name -> clusterpb.KeyValueList
-	5,  // 6: clusterpb.CommandResponse.map:type_name -> clusterpb.KeyValueMap
-	4,  // 7: clusterpb.KeyValueMap.MapEntry.value:type_name -> clusterpb.KeyValueList
-	1,  // 8: clusterpb.ClusterNode.Heartbeat:input_type -> clusterpb.HeartbeatRequest
-	6,  // 9: clusterpb.ClusterNode.RunCommand:input_type -> clusterpb.CommandRequest
-	6,  // 10: clusterpb.ClusterNode.StreamCommand:input_type -> clusterpb.CommandRequest
-	2,  // 11: clusterpb.ClusterNode.Heartbeat:output_type -> clusterpb.HeartbeatResponse
-	7,  // 12: clusterpb.ClusterNode.RunCommand:output_type -> clusterpb.CommandResponse
-	7,  // 13: clusterpb.ClusterNode.StreamCommand:output_type -> clusterpb.CommandResponse
-	11, // [11:14] is the sub-list for method output_type
-	8,  // [8:11] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	0,  // 0: clusterpb.HeartbeatRequest.peers:type_name -> clusterpb.Node
+	0,  // 1: clusterpb.HeartbeatResponse.peers:type_name -> clusterpb.Node
+	3,  // 2: clusterpb.KeyValueList.list:type_name -> clusterpb.KeyValue
+	8,  // 3: clusterpb.KeyValueMap.map:type_name -> clusterpb.KeyValueMap.MapEntry
+	4,  // 4: clusterpb.CommandResponse.list:type_name -> clusterpb.KeyValueList
+	5,  // 5: clusterpb.CommandResponse.map:type_name -> clusterpb.KeyValueMap
+	4,  // 6: clusterpb.KeyValueMap.MapEntry.value:type_name -> clusterpb.KeyValueList
+	1,  // 7: clusterpb.ClusterNode.Heartbeat:input_type -> clusterpb.HeartbeatRequest
+	6,  // 8: clusterpb.ClusterNode.RunCommand:input_type -> clusterpb.CommandRequest
+	6,  // 9: clusterpb.ClusterNode.StreamCommand:input_type -> clusterpb.CommandRequest
+	2,  // 10: clusterpb.ClusterNode.Heartbeat:output_type -> clusterpb.HeartbeatResponse
+	7,  // 11: clusterpb.ClusterNode.RunCommand:output_type -> clusterpb.CommandResponse
+	7,  // 12: clusterpb.ClusterNode.StreamCommand:output_type -> clusterpb.CommandResponse
+	10, // [10:13] is the sub-list for method output_type
+	7,  // [7:10] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_proto_clusterpb_cluster_proto_init() }
