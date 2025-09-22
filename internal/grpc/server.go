@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 // clusterNodeServer is the implementation of the ClusterNode gRPC server.
@@ -57,10 +58,11 @@ func StartGrpcServer(env *environment.Environment, cm *cluster.ClusterManager) {
 // It merges the state of the incoming node and its peers with the current node's state.
 func (s *clusterNodeServer) Heartbeat(ctx context.Context, req *clusterpb.HeartbeatRequest) (*clusterpb.HeartbeatResponse, error) {
 	slog.Debug("gRPC server: received heartbeat")
-	prev, _ := s.cm.HashRing.GetVersion()
 	s.cm.MergeState(req.Peers)
-	next, _ := s.cm.HashRing.GetVersion()
+	next := s.cm.HashRing.GetVersion()
+	prev := s.cm.HashRing.GetLastVersion()
 	if next != prev {
+		s.cm.HashRing.CommitVersion()
 		go s.cm.Rebalance()
 	}
 
@@ -79,13 +81,17 @@ func (s *clusterNodeServer) Heartbeat(ctx context.Context, req *clusterpb.Heartb
 // It executes the command using the ClusterManager and returns the result.
 func (s *clusterNodeServer) RunCommand(ctx context.Context, req *clusterpb.CommandRequest) (*clusterpb.CommandResponse, error) {
 	slog.Debug(fmt.Sprintf("gRPC server: received command '%s' for key '%s'", req.Command, req.Key))
-	data, err := s.cm.RunCommand(ctx, req)
-	if err != nil {
-		return &clusterpb.CommandResponse{Error: err.Error()}, nil
+	replicate := true
+	md, ok := metadata.FromIncomingContext(ctx)
+	if vals := md.Get("replicate"); ok && len(vals) > 0 {
+		if vals[0] == "false" {
+			replicate = false
+		}
 	}
 
-	if s.cm.HashRing.Replicas > 1 {
-		go s.cm.ReplicateCommand(req)
+	data, err := s.cm.RunCommand(ctx, req, replicate)
+	if err != nil {
+		return &clusterpb.CommandResponse{Error: err.Error()}, nil
 	}
 
 	resp, err := response.Marshal(data)
@@ -99,6 +105,15 @@ func (s *clusterNodeServer) RunCommand(ctx context.Context, req *clusterpb.Comma
 // StreamCommand handles incoming streaming command requests from other nodes in the cluster.
 // It receives a stream of commands, executes them, and sends back a stream of responses.
 func (s *clusterNodeServer) StreamCommand(stream clusterpb.ClusterNode_StreamCommandServer) error {
+	replicate := true
+	ctx := stream.Context()
+	md, ok := metadata.FromIncomingContext(ctx)
+	if vals := md.Get("replicate"); ok && len(vals) > 0 {
+		if vals[0] == "false" {
+			replicate = false
+		}
+	}
+
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -111,7 +126,7 @@ func (s *clusterNodeServer) StreamCommand(stream clusterpb.ClusterNode_StreamCom
 		}
 
 		slog.Debug(fmt.Sprintf("gRPC server: received streamed command '%s' for key '%s'", req.Command, req.Key))
-		data, err := s.cm.RunCommand(stream.Context(), req)
+		data, err := s.cm.RunCommand(ctx, req, replicate)
 		if err != nil {
 			slog.Warn(fmt.Sprintf("gRPC server: error running streamed command: %v", err))
 			return err
@@ -126,26 +141,6 @@ func (s *clusterNodeServer) StreamCommand(stream clusterpb.ClusterNode_StreamCom
 		if err := stream.Send(resp); err != nil {
 			slog.Warn(fmt.Sprintf("gRPC server: error sending to command stream: %v", err))
 			return err
-		}
-	}
-}
-
-// Rebalance handles batches of commands for rebalancing cluster.
-func (s *clusterNodeServer) Rebalance(stream clusterpb.ClusterNode_RebalanceServer) error {
-	for {
-		req, err := stream.Recv()
-		if err == io.EOF {
-			return stream.SendAndClose(&clusterpb.RebalanceResponse{Success: true})
-		}
-
-		if err != nil {
-			slog.Warn(fmt.Sprintf("gRPC server: error receiving from rebalance stream: %v", err))
-			return err
-		}
-
-		slog.Debug(fmt.Sprintf("gRPC server: received rebalance commands %v", len(req.Commands)))
-		for _, command := range req.Commands {
-			s.cm.RunCommand(stream.Context(), command)
 		}
 	}
 }

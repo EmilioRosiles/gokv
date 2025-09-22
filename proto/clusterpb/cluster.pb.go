@@ -515,94 +515,6 @@ func (*CommandResponse_List) isCommandResponse_Response() {}
 
 func (*CommandResponse_Map) isCommandResponse_Response() {}
 
-type RebalanceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Commands      []*CommandRequest      `protobuf:"bytes,1,rep,name=commands,proto3" json:"commands,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RebalanceRequest) Reset() {
-	*x = RebalanceRequest{}
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RebalanceRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RebalanceRequest) ProtoMessage() {}
-
-func (x *RebalanceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RebalanceRequest.ProtoReflect.Descriptor instead.
-func (*RebalanceRequest) Descriptor() ([]byte, []int) {
-	return file_proto_clusterpb_cluster_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *RebalanceRequest) GetCommands() []*CommandRequest {
-	if x != nil {
-		return x.Commands
-	}
-	return nil
-}
-
-type RebalanceResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RebalanceResponse) Reset() {
-	*x = RebalanceResponse{}
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RebalanceResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RebalanceResponse) ProtoMessage() {}
-
-func (x *RebalanceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RebalanceResponse.ProtoReflect.Descriptor instead.
-func (*RebalanceResponse) Descriptor() ([]byte, []int) {
-	return file_proto_clusterpb_cluster_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *RebalanceResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
 var File_proto_clusterpb_cluster_proto protoreflect.FileDescriptor
 
 const file_proto_clusterpb_cluster_proto_rawDesc = "" +
@@ -639,17 +551,12 @@ const file_proto_clusterpb_cluster_proto_rawDesc = "" +
 	"\x04list\x18\x05 \x01(\v2\x17.clusterpb.KeyValueListH\x00R\x04list\x12*\n" +
 	"\x03map\x18\x06 \x01(\v2\x16.clusterpb.KeyValueMapH\x00R\x03mapB\n" +
 	"\n" +
-	"\bresponse\"I\n" +
-	"\x10RebalanceRequest\x125\n" +
-	"\bcommands\x18\x01 \x03(\v2\x19.clusterpb.CommandRequestR\bcommands\"-\n" +
-	"\x11RebalanceResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess2\xb0\x02\n" +
+	"\bresponse2\xe6\x01\n" +
 	"\vClusterNode\x12F\n" +
 	"\tHeartbeat\x12\x1b.clusterpb.HeartbeatRequest\x1a\x1c.clusterpb.HeartbeatResponse\x12C\n" +
 	"\n" +
 	"RunCommand\x12\x19.clusterpb.CommandRequest\x1a\x1a.clusterpb.CommandResponse\x12J\n" +
-	"\rStreamCommand\x12\x19.clusterpb.CommandRequest\x1a\x1a.clusterpb.CommandResponse(\x010\x01\x12H\n" +
-	"\tRebalance\x12\x1b.clusterpb.RebalanceRequest\x1a\x1c.clusterpb.RebalanceResponse(\x01B\rZ\v./clusterpbb\x06proto3"
+	"\rStreamCommand\x12\x19.clusterpb.CommandRequest\x1a\x1a.clusterpb.CommandResponse(\x010\x01B\rZ\v./clusterpbb\x06proto3"
 
 var (
 	file_proto_clusterpb_cluster_proto_rawDescOnce sync.Once
@@ -663,7 +570,7 @@ func file_proto_clusterpb_cluster_proto_rawDescGZIP() []byte {
 	return file_proto_clusterpb_cluster_proto_rawDescData
 }
 
-var file_proto_clusterpb_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_proto_clusterpb_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_proto_clusterpb_cluster_proto_goTypes = []any{
 	(*Node)(nil),              // 0: clusterpb.Node
 	(*HeartbeatRequest)(nil),  // 1: clusterpb.HeartbeatRequest
@@ -673,32 +580,27 @@ var file_proto_clusterpb_cluster_proto_goTypes = []any{
 	(*KeyValueMap)(nil),       // 5: clusterpb.KeyValueMap
 	(*CommandRequest)(nil),    // 6: clusterpb.CommandRequest
 	(*CommandResponse)(nil),   // 7: clusterpb.CommandResponse
-	(*RebalanceRequest)(nil),  // 8: clusterpb.RebalanceRequest
-	(*RebalanceResponse)(nil), // 9: clusterpb.RebalanceResponse
-	nil,                       // 10: clusterpb.KeyValueMap.MapEntry
+	nil,                       // 8: clusterpb.KeyValueMap.MapEntry
 }
 var file_proto_clusterpb_cluster_proto_depIdxs = []int32{
 	0,  // 0: clusterpb.HeartbeatRequest.peers:type_name -> clusterpb.Node
 	0,  // 1: clusterpb.HeartbeatResponse.peers:type_name -> clusterpb.Node
 	3,  // 2: clusterpb.KeyValueList.list:type_name -> clusterpb.KeyValue
-	10, // 3: clusterpb.KeyValueMap.map:type_name -> clusterpb.KeyValueMap.MapEntry
+	8,  // 3: clusterpb.KeyValueMap.map:type_name -> clusterpb.KeyValueMap.MapEntry
 	4,  // 4: clusterpb.CommandResponse.list:type_name -> clusterpb.KeyValueList
 	5,  // 5: clusterpb.CommandResponse.map:type_name -> clusterpb.KeyValueMap
-	6,  // 6: clusterpb.RebalanceRequest.commands:type_name -> clusterpb.CommandRequest
-	4,  // 7: clusterpb.KeyValueMap.MapEntry.value:type_name -> clusterpb.KeyValueList
-	1,  // 8: clusterpb.ClusterNode.Heartbeat:input_type -> clusterpb.HeartbeatRequest
-	6,  // 9: clusterpb.ClusterNode.RunCommand:input_type -> clusterpb.CommandRequest
-	6,  // 10: clusterpb.ClusterNode.StreamCommand:input_type -> clusterpb.CommandRequest
-	8,  // 11: clusterpb.ClusterNode.Rebalance:input_type -> clusterpb.RebalanceRequest
-	2,  // 12: clusterpb.ClusterNode.Heartbeat:output_type -> clusterpb.HeartbeatResponse
-	7,  // 13: clusterpb.ClusterNode.RunCommand:output_type -> clusterpb.CommandResponse
-	7,  // 14: clusterpb.ClusterNode.StreamCommand:output_type -> clusterpb.CommandResponse
-	9,  // 15: clusterpb.ClusterNode.Rebalance:output_type -> clusterpb.RebalanceResponse
-	12, // [12:16] is the sub-list for method output_type
-	8,  // [8:12] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	4,  // 6: clusterpb.KeyValueMap.MapEntry.value:type_name -> clusterpb.KeyValueList
+	1,  // 7: clusterpb.ClusterNode.Heartbeat:input_type -> clusterpb.HeartbeatRequest
+	6,  // 8: clusterpb.ClusterNode.RunCommand:input_type -> clusterpb.CommandRequest
+	6,  // 9: clusterpb.ClusterNode.StreamCommand:input_type -> clusterpb.CommandRequest
+	2,  // 10: clusterpb.ClusterNode.Heartbeat:output_type -> clusterpb.HeartbeatResponse
+	7,  // 11: clusterpb.ClusterNode.RunCommand:output_type -> clusterpb.CommandResponse
+	7,  // 12: clusterpb.ClusterNode.StreamCommand:output_type -> clusterpb.CommandResponse
+	10, // [10:13] is the sub-list for method output_type
+	7,  // [7:10] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_proto_clusterpb_cluster_proto_init() }
@@ -719,7 +621,7 @@ func file_proto_clusterpb_cluster_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_clusterpb_cluster_proto_rawDesc), len(file_proto_clusterpb_cluster_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

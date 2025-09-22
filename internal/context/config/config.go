@@ -52,6 +52,6 @@ func LoadConfig(env *environment.Environment) *Config {
 		os.Exit(1)
 	}
 
-	slog.Info(fmt.Sprintf("config: loaded configuration from: %s", env.CfgPath))
+	slog.Debug(fmt.Sprintf("config: loaded configuration from: %s", env.CfgPath))
 	return &config
 }

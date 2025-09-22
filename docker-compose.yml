@@ -28,6 +28,7 @@ services:
       PORT: 50051
       TLS_CERT_PATH: ""
       TLS_KEY_PATH: ""
+      CONFIG_PATH: "/app/config.yaml"
     
   gokv2:
     <<: *gokv-base
@@ -39,6 +40,7 @@ services:
       SEED_NODE_ADDR: "gokv1:50051"
       TLS_CERT_PATH: ""
       TLS_KEY_PATH: ""
+      CONFIG_PATH: "/app/config.yaml"
     depends_on:
       - gokv1
 
@@ -52,6 +54,7 @@ services:
       SEED_NODE_ADDR: "gokv1:50051"
       TLS_CERT_PATH: ""
       TLS_KEY_PATH: ""
+      CONFIG_PATH: "/app/config.yaml"
     depends_on:
       - gokv1
 

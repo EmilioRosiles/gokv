@@ -8,7 +8,6 @@ service ClusterNode {
   rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
   rpc RunCommand(CommandRequest) returns (CommandResponse);
   rpc StreamCommand(stream CommandRequest) returns (stream CommandResponse);
-  rpc Rebalance(stream RebalanceRequest) returns (RebalanceResponse);
 }
 
 message Node {
@@ -54,12 +53,4 @@ message CommandResponse {
     KeyValueList list = 5;  // For key/value lists (e.g., `HGET hash` or `HGET hash field1 field2` )
     KeyValueMap map = 6;    // For key/value maps
   }
-}
-
-message RebalanceRequest {
-  repeated CommandRequest commands = 1;
-}
-
-message RebalanceResponse {
-  bool success = 1;
 }

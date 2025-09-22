@@ -16,12 +16,13 @@ type HashFunc func(data []byte) uint32
 // Consistent Hashing implementation. Dictates how the keys are distributed in the Cluster.
 // This algorith minimizes key redistribution if the cluster state changes
 type HashRing struct {
-	mu         sync.RWMutex
-	hash       HashFunc
-	vNodeCount int
-	Replicas   int
-	keys       []int
-	hashMap    map[int]string
+	mu          sync.RWMutex
+	hash        HashFunc
+	vNodeCount  int
+	Replicas    int
+	keys        []int
+	hashMap     map[int]string
+	LastVersion uint64
 }
 
 // Creates new hashring
@@ -98,13 +99,13 @@ func (h *HashRing) Get(nodeID string) []string {
 }
 
 // GetVersion returns a hash of all the alive peers in the cluster.
-func (h *HashRing) GetVersion() (uint64, error) {
+func (h *HashRing) GetVersion() uint64 {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
 	if len(h.keys) == 0 {
 		slog.Warn("hash ring: error computing hash ring version: no keys found")
-		return 0, nil
+		return 0
 	}
 
 	hasher := fnv.New64a()
@@ -112,9 +113,22 @@ func (h *HashRing) GetVersion() (uint64, error) {
 		err := binary.Write(hasher, binary.BigEndian, int64(key))
 		if err != nil {
 			slog.Warn(fmt.Sprintf("hash ring: error computing hash ring version: %v", err))
-			return 0, err
+			return 0
 		}
 	}
 
-	return hasher.Sum64(), nil
+	return hasher.Sum64()
+}
+
+func (h *HashRing) GetLastVersion() uint64 {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.LastVersion
+}
+
+func (h *HashRing) CommitVersion() {
+	currentVersion := h.GetVersion()
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.LastVersion = currentVersion
 }
