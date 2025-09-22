@@ -287,39 +287,40 @@ func (cm *ClusterManager) Rebalance() {
 
 	// Commands to rebalance by node
 	commandsByNode := make(map[string][]*clusterpb.CommandRequest)
-	deleteList := make(map[string]struct{})
+	deleteList := make([]string, 0)
 
-	cm.HashMap.Scan(func(hash, key string, entry *hashmap.FieldEntry) {
+	cm.HashMap.ScanHash(func(hash string, he *hashmap.HashEntry) {
 		responsibleNodes := cm.GetResponsibleNodes(hash)
 		isResponsible := slices.Contains(responsibleNodes, cm.NodeID)
-		// If this node is not responsible anymore for this key at all, or if it is and there are more replicas
-		if !isResponsible || (isResponsible && cm.HashRing.Replicas > 1) {
-			ttl := int64(0)
-			if entry.ExpiresAt > 0 {
-				ttl = entry.ExpiresAt - time.Now().Unix()
-			}
+		he.Mu.RLock()
+		for key, entry := range he.Items {
+			// If this node is not responsible anymore for this key at all, or if it is and there are more replicas
+			if !isResponsible || (isResponsible && cm.HashRing.Replicas > 1) {
+				ttl := int64(0)
+				if entry.ExpiresAt > 0 {
+					ttl = entry.ExpiresAt - time.Now().Unix()
+				}
 
-			args := make([][]byte, 0)
-			args = append(args, []byte(key))
-			args = append(args, entry.Data)
-			args = append(args, fmt.Appendf(nil, "%d", ttl))
+				args := make([][]byte, 0)
+				args = append(args, []byte(key))
+				args = append(args, entry.Data)
+				args = append(args, fmt.Appendf(nil, "%d", ttl))
 
-			req := &clusterpb.CommandRequest{
-				Command: "HSET",
-				Key:     hash,
-				Args:    args,
-			}
+				req := &clusterpb.CommandRequest{
+					Command: "HSET",
+					Key:     hash,
+					Args:    args,
+				}
 
-			for _, nodeID := range responsibleNodes {
-				if nodeID != cm.NodeID {
-					commandsByNode[nodeID] = append(commandsByNode[nodeID], req)
+				for _, nodeID := range responsibleNodes {
+					if nodeID != cm.NodeID {
+						commandsByNode[nodeID] = append(commandsByNode[nodeID], req)
+					}
 				}
 			}
-			if !isResponsible {
-				if _, exists := deleteList[hash]; !exists {
-					deleteList[hash] = struct{}{}
-				}
-			}
+		}
+		if !isResponsible {
+			deleteList = append(deleteList, hash)
 		}
 	})
 
@@ -353,7 +354,7 @@ func (cm *ClusterManager) Rebalance() {
 		}
 	}
 
-	for hash := range deleteList {
+	for _, hash := range deleteList {
 		cm.HashMap.HDel(hash)
 	}
 

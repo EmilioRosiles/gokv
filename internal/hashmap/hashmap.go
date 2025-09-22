@@ -20,8 +20,8 @@ type FieldEntry struct {
 
 // hashEntry represents a hash with its own mutex and map of fields.
 type HashEntry struct {
-	mu    sync.RWMutex
-	items map[string]*FieldEntry // The map of fields in the hash.
+	Mu    sync.RWMutex
+	Items map[string]*FieldEntry // The map of fields in the hash.
 }
 
 const shardCount = 256
@@ -57,15 +57,15 @@ func (c *HashMap) HGet(hash string, args ...[]byte) (any, error) {
 		return nil, errors.New("hget: hash not found")
 	}
 
-	he.mu.RLock()
-	defer he.mu.RUnlock()
+	he.Mu.RLock()
+	defer he.Mu.RUnlock()
 
 	if len(args) == 0 {
 		kvList := &clusterpb.KeyValueList{
 			List: make([]*clusterpb.KeyValue, 0),
 		}
 
-		for key, entry := range he.items {
+		for key, entry := range he.Items {
 			if entry.ExpiresAt > 0 && time.Now().Unix() > entry.ExpiresAt {
 				continue
 			}
@@ -76,7 +76,7 @@ func (c *HashMap) HGet(hash string, args ...[]byte) (any, error) {
 	}
 
 	if len(args) == 1 {
-		entry, ok := he.items[string(args[0])]
+		entry, ok := he.Items[string(args[0])]
 		if !ok || entry.ExpiresAt > 0 && time.Now().Unix() > entry.ExpiresAt {
 			return nil, errors.New("hget: key not found")
 		}
@@ -90,7 +90,7 @@ func (c *HashMap) HGet(hash string, args ...[]byte) (any, error) {
 
 	for _, arg := range args {
 		key := string(arg)
-		entry, ok := he.items[key]
+		entry, ok := he.Items[key]
 		if !ok || entry.ExpiresAt > 0 && time.Now().Unix() > entry.ExpiresAt {
 			continue
 		}
@@ -134,15 +134,15 @@ func (c *HashMap) HSet(hash string, args ...[]byte) (any, error) {
 		shard.mu.Lock()
 		// Re-check in case another goroutine created it while we waited for the lock.
 		if he, ok = shard.hashes[hash]; !ok {
-			he = &HashEntry{items: make(map[string]*FieldEntry)}
+			he = &HashEntry{Items: make(map[string]*FieldEntry)}
 			shard.hashes[hash] = he
 		}
 		shard.mu.Unlock()
 	}
 
-	he.mu.Lock()
-	he.items[key] = entry
-	he.mu.Unlock()
+	he.Mu.Lock()
+	he.Items[key] = entry
+	he.Mu.Unlock()
 	return true, nil
 }
 
@@ -167,16 +167,16 @@ func (c *HashMap) HDel(hash string, args ...[]byte) (any, error) {
 
 	// Otherwise, delete specified keys.
 	deletedCount := 0
-	he.mu.Lock()
+	he.Mu.Lock()
 	for _, keyBytes := range args {
 		key := string(keyBytes)
-		if _, ok := he.items[key]; ok {
-			delete(he.items, key)
+		if _, ok := he.Items[key]; ok {
+			delete(he.Items, key)
 			deletedCount++
 		}
 	}
-	isEmpty := len(he.items) == 0
-	he.mu.Unlock()
+	isEmpty := len(he.Items) == 0
+	he.Mu.Unlock()
 
 	if isEmpty {
 		shard.mu.Lock()
@@ -187,18 +187,29 @@ func (c *HashMap) HDel(hash string, args ...[]byte) (any, error) {
 	return int64(deletedCount), nil
 }
 
-// Scan iterates over all key-value pairs in the hash map and calls the callback for each pair.
-// This is done in a thread-safe manner, using read locks.
-func (c *HashMap) Scan(callback func(hash string, key string, entry *FieldEntry)) {
+// Scan iterates over all hashes in the hash map and calls the callback for each pair.
+func (c *HashMap) ScanHash(callback func(hash string, he *HashEntry)) {
 	for i := range shardCount {
 		shard := c.shards[i]
 		shard.mu.RLock()
 		for hash, he := range shard.hashes {
-			he.mu.RLock()
-			for key, entry := range he.items {
+			callback(hash, he)
+		}
+		shard.mu.RUnlock()
+	}
+}
+
+// Scan iterates over all hash key-value in the hash map and calls the callback for each pair.
+func (c *HashMap) ScanEntry(callback func(hash string, key string, entry *FieldEntry)) {
+	for i := range shardCount {
+		shard := c.shards[i]
+		shard.mu.RLock()
+		for hash, he := range shard.hashes {
+			he.Mu.RLock()
+			for key, entry := range he.Items {
 				callback(hash, key, entry)
 			}
-			he.mu.RUnlock()
+			he.Mu.RUnlock()
 		}
 		shard.mu.RUnlock()
 	}
@@ -232,13 +243,13 @@ func (c *HashMap) deleteExpired() {
 		shard := c.shards[i]
 		shard.mu.Lock()
 		for hash, he := range shard.hashes {
-			for key, entry := range he.items {
+			for key, entry := range he.Items {
 				if entry.ExpiresAt > 0 && now > entry.ExpiresAt {
-					delete(he.items, key)
+					delete(he.Items, key)
 				}
 			}
 
-			if len(he.items) == 0 {
+			if len(he.Items) == 0 {
 				delete(shard.hashes, hash)
 			}
 		}
