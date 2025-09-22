@@ -8,6 +8,7 @@ Gokv is a distributed in-memory key-value store written in Go. It is designed to
 *   [Configuration](#configuration)
 *   [gRPC API](#grpc-api)
 *   [Architecture](#architecture)
+*   [Replication](#replication)
 
 ## Quickstart
 
@@ -92,6 +93,7 @@ The following env variables can be used to configure a `gokv` node:
 
 | Variable         | Description                                     |  Default  |
 | ---------------- | ----------------------------------------------- |  -------  |
+| `LOG_LEVEL`      | Level of logs shown in the console.             | `info`    |
 | `NODE_ID`        | A unique identifier for the node.               |           |
 | `HOST`           | The hostname or IP address of the node.         | `0.0.0.0` |
 | `PORT`           | The port to listen on for gRPC connections.     | `8080`    |
@@ -120,6 +122,7 @@ The following config variables can be used to configure a `gokv` cluster:
 | `gossip_peer_count` | Number of peers to gossip to.                   | `2`       |
 | `v_node_count`      | Number of virtual nodes in the hashring.        | `3`       |
 | `message_timeout`   | Timeout of grpc messages.                       | `5s`      |
+| `replicas`          | Number of replicas in the cluster.              | `2`       |
 
 ## gRPC API
 
@@ -127,7 +130,7 @@ The `gokv` nodes communicate with each other using a gRPC API. The following ser
 
 *   `ClusterNode`:
     *   `Heartbeat`: Used by the nodes to exchange cluster state information.
-    *   `RunCommand`: Runs a command in the cluster.
+    *   `RunCommand`: Runs a command in the cluster. It includes a `Command Level` field to specify whether the command should be run on the `node` or the `cluster`. Accepts a `replication` field in the metadata to specify whether the command should be replicated (needed to avoid infinite loops in commands that run on more than one node).
     *   `StreamCommand`: Used for streaming commands.
 
 To regenerate the proto buffer files, run the following command:
@@ -150,8 +153,10 @@ The nodes in the cluster use a gossip protocol to maintain a consistent view of 
 
 When a node receives a heartbeat message, it merges the received information with its own view of the cluster. This process ensures that all nodes eventually converge on the same view of the cluster.
 
+### Data Replication
+
+Write commands (e.g. `HSET`, `HDEL`) are replicated to other nodes in the cluster to ensure data durability. When a node receives a write command, it first applies the command to its own data store and then forwards the command to the other replicas. Read commands (e.g. `HGET`) can be sent to any node, they will be redirected to a random replica.
+
 ### Data Rebalancing
 
-When a new node joins the cluster, it needs to receive its share of the data from the other nodes. This process is called data rebalancing.
-
-When a node joins, it is added to the hash ring. As a result, some keys that were previously assigned to other nodes are now assigned to the new node. The nodes that are no longer responsible for these keys will send them to the new node. This is done using the `StreamCommand` gRPC endpoint.
+When the cluster state changes each node will trigger a rebalance. As a result, some keys that were previously assigned to other nodes are now assigned to the new node. The nodes that are no longer responsible for these keys will send them to the new node. This is done using the `StreamCommand` gRPC endpoint.
