@@ -19,7 +19,7 @@ type HashRing struct {
 	mu         sync.RWMutex
 	hash       HashFunc
 	vNodeCount int
-	replicas   int
+	Replicas   int
 	keys       []int
 	hashMap    map[int]string
 }
@@ -28,7 +28,7 @@ type HashRing struct {
 func New(vNodeCount int, replicas int, fn HashFunc) *HashRing {
 	h := &HashRing{
 		vNodeCount: vNodeCount,
-		replicas:   replicas,
+		Replicas:   replicas,
 		hash:       fn,
 		hashMap:    make(map[int]string),
 	}
@@ -86,8 +86,8 @@ func (h *HashRing) Get(nodeID string) []string {
 		idx = 0
 	}
 
-	nodes := make([]string, 0, h.replicas)
-	for i := idx; len(nodes) < h.replicas && len(nodes) < len(h.keys); i++ {
+	nodes := make([]string, 0, h.Replicas)
+	for i := idx; len(nodes) < h.Replicas && len(nodes) < len(h.keys); i++ {
 		if i == len(h.keys) {
 			i = 0
 		}

@@ -22,6 +22,7 @@ const (
 	ClusterNode_Heartbeat_FullMethodName     = "/clusterpb.ClusterNode/Heartbeat"
 	ClusterNode_RunCommand_FullMethodName    = "/clusterpb.ClusterNode/RunCommand"
 	ClusterNode_StreamCommand_FullMethodName = "/clusterpb.ClusterNode/StreamCommand"
+	ClusterNode_Rebalance_FullMethodName     = "/clusterpb.ClusterNode/Rebalance"
 )
 
 // ClusterNodeClient is the client API for ClusterNode service.
@@ -31,6 +32,7 @@ type ClusterNodeClient interface {
 	Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error)
 	RunCommand(ctx context.Context, in *CommandRequest, opts ...grpc.CallOption) (*CommandResponse, error)
 	StreamCommand(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[CommandRequest, CommandResponse], error)
+	Rebalance(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[RebalanceRequest, RebalanceResponse], error)
 }
 
 type clusterNodeClient struct {
@@ -74,6 +76,19 @@ func (c *clusterNodeClient) StreamCommand(ctx context.Context, opts ...grpc.Call
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type ClusterNode_StreamCommandClient = grpc.BidiStreamingClient[CommandRequest, CommandResponse]
 
+func (c *clusterNodeClient) Rebalance(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[RebalanceRequest, RebalanceResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &ClusterNode_ServiceDesc.Streams[1], ClusterNode_Rebalance_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[RebalanceRequest, RebalanceResponse]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ClusterNode_RebalanceClient = grpc.ClientStreamingClient[RebalanceRequest, RebalanceResponse]
+
 // ClusterNodeServer is the server API for ClusterNode service.
 // All implementations must embed UnimplementedClusterNodeServer
 // for forward compatibility.
@@ -81,6 +96,7 @@ type ClusterNodeServer interface {
 	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
 	RunCommand(context.Context, *CommandRequest) (*CommandResponse, error)
 	StreamCommand(grpc.BidiStreamingServer[CommandRequest, CommandResponse]) error
+	Rebalance(grpc.ClientStreamingServer[RebalanceRequest, RebalanceResponse]) error
 	mustEmbedUnimplementedClusterNodeServer()
 }
 
@@ -99,6 +115,9 @@ func (UnimplementedClusterNodeServer) RunCommand(context.Context, *CommandReques
 }
 func (UnimplementedClusterNodeServer) StreamCommand(grpc.BidiStreamingServer[CommandRequest, CommandResponse]) error {
 	return status.Errorf(codes.Unimplemented, "method StreamCommand not implemented")
+}
+func (UnimplementedClusterNodeServer) Rebalance(grpc.ClientStreamingServer[RebalanceRequest, RebalanceResponse]) error {
+	return status.Errorf(codes.Unimplemented, "method Rebalance not implemented")
 }
 func (UnimplementedClusterNodeServer) mustEmbedUnimplementedClusterNodeServer() {}
 func (UnimplementedClusterNodeServer) testEmbeddedByValue()                     {}
@@ -164,6 +183,13 @@ func _ClusterNode_StreamCommand_Handler(srv interface{}, stream grpc.ServerStrea
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type ClusterNode_StreamCommandServer = grpc.BidiStreamingServer[CommandRequest, CommandResponse]
 
+func _ClusterNode_Rebalance_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ClusterNodeServer).Rebalance(&grpc.GenericServerStream[RebalanceRequest, RebalanceResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ClusterNode_RebalanceServer = grpc.ClientStreamingServer[RebalanceRequest, RebalanceResponse]
+
 // ClusterNode_ServiceDesc is the grpc.ServiceDesc for ClusterNode service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -185,6 +211,11 @@ var ClusterNode_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "StreamCommand",
 			Handler:       _ClusterNode_StreamCommand_Handler,
 			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "Rebalance",
+			Handler:       _ClusterNode_Rebalance_Handler,
 			ClientStreams: true,
 		},
 	},

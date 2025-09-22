@@ -23,7 +23,7 @@ type Environment struct {
 func LoadEnvironment() *Environment {
 	err := godotenv.Load()
 	if err != nil {
-		slog.Warn(fmt.Sprintf("environment: error loading .env file: %v", err))
+		slog.Debug(fmt.Sprintf("environment: error loading .env file: %v", err))
 	}
 
 	nodeID := os.Getenv("NODE_ID")
