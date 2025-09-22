@@ -292,9 +292,9 @@ func (cm *ClusterManager) Rebalance() {
 	cm.HashMap.ScanHash(func(hash string, he *hashmap.HashEntry) {
 		responsibleNodes := cm.GetResponsibleNodes(hash)
 		isResponsible := slices.Contains(responsibleNodes, cm.NodeID)
-		he.Mu.RLock()
 		// If this node is not responsible anymore for this key at all, or if it is and there are more replicas
 		if !isResponsible || (isResponsible && cm.HashRing.Replicas > 1) {
+			he.Mu.RLock()
 			for key, entry := range he.Items {
 				ttl := int64(0)
 				if entry.ExpiresAt > 0 {
@@ -318,6 +318,7 @@ func (cm *ClusterManager) Rebalance() {
 					}
 				}
 			}
+			he.Mu.RUnlock()
 		}
 		if !isResponsible {
 			deleteList = append(deleteList, hash)

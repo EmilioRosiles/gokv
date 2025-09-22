@@ -168,6 +168,7 @@ func (c *HashMap) HDel(hash string, args ...[]byte) (any, error) {
 	// Otherwise, delete specified keys.
 	deletedCount := 0
 	he.Mu.Lock()
+	defer he.Mu.Unlock()
 	for _, keyBytes := range args {
 		key := string(keyBytes)
 		if _, ok := he.Items[key]; ok {
@@ -176,7 +177,6 @@ func (c *HashMap) HDel(hash string, args ...[]byte) (any, error) {
 		}
 	}
 	isEmpty := len(he.Items) == 0
-	he.Mu.Unlock()
 
 	if isEmpty {
 		shard.mu.Lock()
@@ -243,6 +243,7 @@ func (c *HashMap) deleteExpired() {
 		shard := c.shards[i]
 		shard.mu.Lock()
 		for hash, he := range shard.hashes {
+			he.Mu.Lock()
 			for key, entry := range he.Items {
 				if entry.ExpiresAt > 0 && now > entry.ExpiresAt {
 					delete(he.Items, key)
@@ -252,6 +253,7 @@ func (c *HashMap) deleteExpired() {
 			if len(he.Items) == 0 {
 				delete(shard.hashes, hash)
 			}
+			he.Mu.Unlock()
 		}
 		shard.mu.Unlock()
 	}
