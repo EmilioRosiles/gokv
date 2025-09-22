@@ -293,9 +293,9 @@ func (cm *ClusterManager) Rebalance() {
 		responsibleNodes := cm.GetResponsibleNodes(hash)
 		isResponsible := slices.Contains(responsibleNodes, cm.NodeID)
 		he.Mu.RLock()
-		for key, entry := range he.Items {
-			// If this node is not responsible anymore for this key at all, or if it is and there are more replicas
-			if !isResponsible || (isResponsible && cm.HashRing.Replicas > 1) {
+		// If this node is not responsible anymore for this key at all, or if it is and there are more replicas
+		if !isResponsible || (isResponsible && cm.HashRing.Replicas > 1) {
+			for key, entry := range he.Items {
 				ttl := int64(0)
 				if entry.ExpiresAt > 0 {
 					ttl = entry.ExpiresAt - time.Now().Unix()
@@ -373,7 +373,7 @@ func (cm *ClusterManager) RunCommand(ctx context.Context, req *clusterpb.Command
 		}
 		slog.Debug(fmt.Sprintf("cluster manager: run command %s locally for key: %v", req.Command, req.Key))
 		res, err := cmd.Run(req.Key, req.Args...)
-		if cmd.Level == command.Replica && replicate && cm.HashRing.Replicas > 1 {
+		if replicate && cmd.Level == command.Replica && cm.HashRing.Replicas > 1 {
 			go cm.ReplicateCommand(req)
 		}
 		return res, err
