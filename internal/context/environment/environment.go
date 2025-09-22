@@ -1,8 +1,9 @@
 package environment
 
 import (
-	"log"
+	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -16,15 +17,12 @@ type Environment struct {
 	CfgPath      string
 	TlsCertPath  string
 	TlsKeyPath   string
+	LogLevel     slog.Level
 }
 
 // LoadEnvironment loads the environment variables from the .env file and the system.
 func LoadEnvironment() *Environment {
-	err := godotenv.Load()
-	if err != nil {
-		log.Printf("Error loading .env file: %v", err)
-	}
-
+	godotenv.Load()
 	nodeID := os.Getenv("NODE_ID")
 	if nodeID == "" {
 		nodeID = "node1"
@@ -49,5 +47,21 @@ func LoadEnvironment() *Environment {
 		CfgPath:      os.Getenv("CONFIG_PATH"),
 		TlsCertPath:  os.Getenv("TLS_CERT_PATH"),
 		TlsKeyPath:   os.Getenv("TLS_KEY_PATH"),
+		LogLevel:     logLevel(os.Getenv("LOG_LEVEL")),
+	}
+}
+
+func logLevel(s string) slog.Level {
+	switch strings.ToLower(s) {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
 	}
 }

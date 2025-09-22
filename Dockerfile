@@ -1,4 +1,4 @@
-FROM golang:1.24 as builder
+FROM golang:1.24 AS builder
 
 ARG VERSION="1.0.0"
 ARG GRPC_PORT="50051"

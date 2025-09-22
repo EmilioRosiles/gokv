@@ -247,9 +247,9 @@ func NewHashMap(cr *command.CommandRegistry, cleanupInterval time.Duration) *Has
 	}
 
 	// Register HashMap commands.
-	cr.Register("HGET", c.HGet)
-	cr.Register("HSET", c.HSet)
-	cr.Register("HDEL", c.HDel)
+	cr.Register("HGET", command.Command{Run: c.HGet})
+	cr.Register("HSET", command.Command{Run: c.HSet, Level: command.Replica})
+	cr.Register("HDEL", command.Command{Run: c.HDel, Level: command.Replica})
 
 	return c
 }
