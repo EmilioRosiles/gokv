@@ -117,6 +117,7 @@ func (cm *ClusterManager) RemoveNode(nodeID string) {
 	if peer, ok := cm.PeerMap[nodeID]; ok {
 		cm.ConnPool.Close(peer.NodeAddr)
 		cm.PeerMap[nodeID].Alive = false
+		cm.PeerMap[nodeID].LastSeen = time.Now()
 		cm.HashRing.Remove(nodeID)
 		slog.Warn(fmt.Sprintf("cluster manager: removed peer from cluster: %s", nodeID))
 	}
@@ -229,7 +230,7 @@ func (cm *ClusterManager) Heartbeat(peerList ...*peer.Peer) {
 
 		cm.Mu.RLock()
 		self := &clusterpb.Node{NodeId: cm.NodeID, NodeAddr: cm.NodeAddr, Alive: true, LastSeen: time.Now().Unix()}
-		peerspb := make([]*clusterpb.Node, 0)
+		peerspb := make([]*clusterpb.Node, 0, len(cm.PeerMap)+1)
 		peerspb = append(peerspb, self)
 		for _, peerToAdd := range cm.PeerMap {
 			peerspb = append(peerspb, peer.ToProto(*peerToAdd))
@@ -291,10 +292,8 @@ func (cm *ClusterManager) Rebalance() {
 	for hash, entries := range hashes {
 		responsibleNodes := cm.GetResponsibleNodes(hash)
 		isResponsible := slices.Contains(responsibleNodes, cm.NodeID)
-		slog.Debug(fmt.Sprintf("cluster manager: verifying key %s responsible nodes: %v", hash, responsibleNodes))
 		// If this node is not responsible anymore for this key at all, or if it is and there are more replicas
 		if !isResponsible || (isResponsible && cm.HashRing.Replicas > 1) {
-			slog.Debug(fmt.Sprintf("cluster manager: adding key %s to rebalance list", hash))
 			for key, value := range entries {
 				ttl := int64(0)
 				if value.ExpiresAt > 0 {
@@ -326,6 +325,7 @@ func (cm *ClusterManager) Rebalance() {
 	}
 
 	for nodeID, commands := range commandsByNode {
+		slog.Debug(fmt.Sprintf("cluster manager: rebalancing %d keys to node %s", len(commands), nodeID))
 		client, ok := cm.GetPeerClient(nodeID)
 		if !ok {
 			slog.Warn(fmt.Sprintf("cluster manager: rebalance command failed for peer %s, client not found", nodeID))
@@ -360,6 +360,7 @@ func (cm *ClusterManager) Rebalance() {
 // RunCommand executes a command, either locally (then replicate if applicable) or by forwarding it to a responsible node.
 func (cm *ClusterManager) RunCommand(ctx context.Context, req *clusterpb.CommandRequest, replicate bool) (any, error) {
 	responsibleNodes := cm.GetResponsibleNodes(req.Key)
+	slog.Debug(fmt.Sprintf("cluster manager: run command responsible nodes: %v", responsibleNodes))
 	if slices.Contains(responsibleNodes, cm.NodeID) {
 		// Execute the command locally.
 		cmd, ok := cm.CommandRegistry.Get(req.Command)

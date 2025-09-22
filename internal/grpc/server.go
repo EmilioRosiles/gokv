@@ -68,7 +68,7 @@ func (s *clusterNodeServer) Heartbeat(ctx context.Context, req *clusterpb.Heartb
 
 	s.cm.Mu.RLock()
 	self := &clusterpb.Node{NodeId: s.cm.NodeID, NodeAddr: s.cm.NodeAddr, Alive: true, LastSeen: time.Now().Unix()}
-	peerspb := make([]*clusterpb.Node, 0)
+	peerspb := make([]*clusterpb.Node, 0, len(s.cm.PeerMap)+1)
 	peerspb = append(peerspb, self)
 	for _, peerToAdd := range s.cm.PeerMap {
 		peerspb = append(peerspb, peer.ToProto(*peerToAdd))

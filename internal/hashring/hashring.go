@@ -72,14 +72,15 @@ func (h *HashRing) Remove(nodeID string) {
 }
 
 // Get ID of the responsible node for a key
-func (h *HashRing) Get(nodeID string) []string {
+func (h *HashRing) Get(key string) []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+
 	if len(h.keys) == 0 {
 		return []string{}
 	}
 
-	hash := int(h.hash([]byte(nodeID)))
+	hash := int(h.hash([]byte(key)))
 	idx := sort.Search(len(h.keys), func(i int) bool {
 		return h.keys[i] >= hash
 	})
@@ -87,15 +88,23 @@ func (h *HashRing) Get(nodeID string) []string {
 		idx = 0
 	}
 
-	nodes := make([]string, 0, h.Replicas)
-	for i := idx; len(nodes) < h.Replicas && len(nodes) < len(h.keys); i++ {
+	uniqueNodes := make([]string, 0, h.Replicas)
+	seen := make(map[string]struct{})
+
+	i := idx
+	for len(uniqueNodes) < h.Replicas && len(seen) < len(h.hashMap)/h.vNodeCount {
+		nodeID := h.hashMap[h.keys[i]]
+		if _, exists := seen[nodeID]; !exists {
+			seen[nodeID] = struct{}{}
+			uniqueNodes = append(uniqueNodes, nodeID)
+		}
+		i++
 		if i == len(h.keys) {
 			i = 0
 		}
-		nodes = append(nodes, h.hashMap[h.keys[i]])
 	}
 
-	return nodes
+	return uniqueNodes
 }
 
 // GetVersion returns a hash of all the alive peers in the cluster.
