@@ -9,33 +9,49 @@ import (
 
 	"gokv/internal/command"
 	"gokv/proto/clusterpb"
+	"hash/fnv"
 )
 
 // fieldEntry represents an individual field in a hash, with its own TTL.
-type fieldEntry struct {
+type FieldEntry struct {
 	Data      []byte // The data of the field.
 	ExpiresAt int64  // The expiration time of the field in Unix nanoseconds.
 }
 
 // hashEntry represents a hash with its own mutex and map of fields.
-type hashEntry struct {
+type HashEntry struct {
 	mu    sync.RWMutex
-	items map[string]*fieldEntry // The map of fields in the hash.
+	items map[string]*FieldEntry // The map of fields in the hash.
+}
+
+const shardCount = 256
+
+// shard represents a shard of the hash map.
+type shard struct {
+	mu     sync.RWMutex
+	hashes map[string]*HashEntry
 }
 
 // HashMap is a thread-safe, in-memory key-value store that supports field-level TTLs.
 type HashMap struct {
-	mu      sync.RWMutex
-	hashes  map[string]*hashEntry // The map of hashes.
-	janitor *janitor              // The janitor for cleaning up expired items.
+	shards  [shardCount]*shard // The shards of the hash map.
+	janitor *janitor           // The janitor for cleaning up expired items.
+}
+
+// getShard returns the shard for a given key.
+func (c *HashMap) getShard(key string) *shard {
+	hasher := fnv.New64a()
+	hasher.Write([]byte(key))
+	return c.shards[hasher.Sum64()%shardCount]
 }
 
 // HGet retrieves a field from a hash.
 // It returns the data if the field exists and has not expired.
 func (c *HashMap) HGet(hash string, args ...[]byte) (any, error) {
-	c.mu.RLock()
-	he, ok := c.hashes[hash]
-	c.mu.RUnlock()
+	shard := c.getShard(hash)
+	shard.mu.RLock()
+	he, ok := shard.hashes[hash]
+	shard.mu.RUnlock()
 
 	if !ok {
 		return nil, errors.New("hget: hash not found")
@@ -104,20 +120,24 @@ func (c *HashMap) HSet(hash string, args ...[]byte) (any, error) {
 		}
 	}
 
-	entry := &fieldEntry{
+	entry := &FieldEntry{
 		Data:      data,
 		ExpiresAt: expiresAt,
 	}
 
-	c.mu.RLock()
-	he, ok := c.hashes[hash]
-	c.mu.RUnlock()
+	shard := c.getShard(hash)
+	shard.mu.RLock()
+	he, ok := shard.hashes[hash]
+	shard.mu.RUnlock()
 
 	if !ok {
-		he = &hashEntry{items: make(map[string]*fieldEntry)}
-		c.mu.Lock()
-		c.hashes[hash] = he
-		c.mu.Unlock()
+		shard.mu.Lock()
+		// Re-check in case another goroutine created it while we waited for the lock.
+		if he, ok = shard.hashes[hash]; !ok {
+			he = &HashEntry{items: make(map[string]*FieldEntry)}
+			shard.hashes[hash] = he
+		}
+		shard.mu.Unlock()
 	}
 
 	he.mu.Lock()
@@ -128,9 +148,10 @@ func (c *HashMap) HSet(hash string, args ...[]byte) (any, error) {
 
 // HDel deletes one or more fields from a hash. If no args are passed, it deletes the entire hash.
 func (c *HashMap) HDel(hash string, args ...[]byte) (any, error) {
-	c.mu.RLock()
-	he, ok := c.hashes[hash]
-	c.mu.RUnlock()
+	shard := c.getShard(hash)
+	shard.mu.RLock()
+	he, ok := shard.hashes[hash]
+	shard.mu.RUnlock()
 
 	if !ok {
 		return int64(0), nil
@@ -138,9 +159,9 @@ func (c *HashMap) HDel(hash string, args ...[]byte) (any, error) {
 
 	// If no args, delete the whole hash.
 	if len(args) == 0 {
-		c.mu.Lock()
-		delete(c.hashes, hash)
-		c.mu.Unlock()
+		shard.mu.Lock()
+		delete(shard.hashes, hash)
+		shard.mu.Unlock()
 		return int64(1), nil
 	}
 
@@ -158,30 +179,29 @@ func (c *HashMap) HDel(hash string, args ...[]byte) (any, error) {
 	he.mu.Unlock()
 
 	if isEmpty {
-		c.mu.Lock()
-		delete(c.hashes, hash)
-		c.mu.Unlock()
+		shard.mu.Lock()
+		delete(shard.hashes, hash)
+		shard.mu.Unlock()
 	}
 
 	return int64(deletedCount), nil
 }
 
-// GetAllData returns all the data in the hashmap.
-func (c *HashMap) GetAllData() map[string]map[string]*fieldEntry {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	data := make(map[string]map[string]*fieldEntry)
-	for hash, he := range c.hashes {
-		data[hash] = make(map[string]*fieldEntry)
-		he.mu.RLock()
-		for key, entry := range he.items {
-			data[hash][key] = entry
+// Scan iterates over all key-value pairs in the hash map and calls the callback for each pair.
+// This is done in a thread-safe manner, using read locks.
+func (c *HashMap) Scan(callback func(hash string, key string, entry *FieldEntry)) {
+	for i := range shardCount {
+		shard := c.shards[i]
+		shard.mu.RLock()
+		for hash, he := range shard.hashes {
+			he.mu.RLock()
+			for key, entry := range he.items {
+				callback(hash, key, entry)
+			}
+			he.mu.RUnlock()
 		}
-		he.mu.RUnlock()
+		shard.mu.RUnlock()
 	}
-
-	return data
 }
 
 // janitor manages the cleanup of expired items in the HashMap.
@@ -208,19 +228,21 @@ func (j *janitor) run(c *HashMap) {
 func (c *HashMap) deleteExpired() {
 	now := time.Now().Unix()
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	for i := range shardCount {
+		shard := c.shards[i]
+		shard.mu.Lock()
+		for hash, he := range shard.hashes {
+			for key, entry := range he.items {
+				if entry.ExpiresAt > 0 && now > entry.ExpiresAt {
+					delete(he.items, key)
+				}
+			}
 
-	for hash, he := range c.hashes {
-		for key, entry := range he.items {
-			if entry.ExpiresAt > 0 && now > entry.ExpiresAt {
-				delete(he.items, key)
+			if len(he.items) == 0 {
+				delete(shard.hashes, hash)
 			}
 		}
-
-		if len(he.items) == 0 {
-			delete(c.hashes, hash)
-		}
+		shard.mu.Unlock()
 	}
 }
 
@@ -232,8 +254,11 @@ func stopJanitor(c *HashMap) {
 // NewHashMap creates a new HashMap with a background cleanup goroutine.
 // The cleanupInterval determines how often the janitor checks for expired items.
 func NewHashMap(cr *command.CommandRegistry, cleanupInterval time.Duration) *HashMap {
-	c := &HashMap{
-		hashes: make(map[string]*hashEntry),
+	c := &HashMap{}
+	for i := range shardCount {
+		c.shards[i] = &shard{
+			hashes: make(map[string]*HashEntry),
+		}
 	}
 
 	if cleanupInterval > 0 {

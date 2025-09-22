@@ -284,45 +284,44 @@ func (cm *ClusterManager) MergeState(nodes []*clusterpb.Node) {
 // Rebalance redistributes keys across the cluster when a new node is added.
 func (cm *ClusterManager) Rebalance() {
 	slog.Debug("cluster manager: rebalancing cluster")
-	hashes := cm.HashMap.GetAllData()
 
 	// Commands to rebalance by node
 	commandsByNode := make(map[string][]*clusterpb.CommandRequest)
+	deleteList := make(map[string]struct{})
 
-	for hash, entries := range hashes {
+	cm.HashMap.Scan(func(hash, key string, entry *hashmap.FieldEntry) {
 		responsibleNodes := cm.GetResponsibleNodes(hash)
 		isResponsible := slices.Contains(responsibleNodes, cm.NodeID)
 		// If this node is not responsible anymore for this key at all, or if it is and there are more replicas
 		if !isResponsible || (isResponsible && cm.HashRing.Replicas > 1) {
-			for key, value := range entries {
-				ttl := int64(0)
-				if value.ExpiresAt > 0 {
-					ttl = value.ExpiresAt - time.Now().Unix()
-				}
+			ttl := int64(0)
+			if entry.ExpiresAt > 0 {
+				ttl = entry.ExpiresAt - time.Now().Unix()
+			}
 
-				args := make([][]byte, 0)
-				args = append(args, []byte(key))
-				args = append(args, value.Data)
-				args = append(args, fmt.Appendf(nil, "%d", ttl))
+			args := make([][]byte, 0)
+			args = append(args, []byte(key))
+			args = append(args, entry.Data)
+			args = append(args, fmt.Appendf(nil, "%d", ttl))
 
-				req := &clusterpb.CommandRequest{
-					Command: "HSET",
-					Key:     hash,
-					Args:    args,
-				}
+			req := &clusterpb.CommandRequest{
+				Command: "HSET",
+				Key:     hash,
+				Args:    args,
+			}
 
-				for _, nodeID := range responsibleNodes {
-					if nodeID != cm.NodeID {
-						commandsByNode[nodeID] = append(commandsByNode[nodeID], req)
-					}
+			for _, nodeID := range responsibleNodes {
+				if nodeID != cm.NodeID {
+					commandsByNode[nodeID] = append(commandsByNode[nodeID], req)
 				}
 			}
-			// If this node is not responsible anymore for this key at all, remove it from structure
 			if !isResponsible {
-				cm.HashMap.HDel(hash)
+				if _, exists := deleteList[hash]; !exists {
+					deleteList[hash] = struct{}{}
+				}
 			}
 		}
-	}
+	})
 
 	for nodeID, commands := range commandsByNode {
 		slog.Debug(fmt.Sprintf("cluster manager: rebalancing %d keys to node %s", len(commands), nodeID))
@@ -341,7 +340,7 @@ func (cm *ClusterManager) Rebalance() {
 		}
 
 		for _, command := range commands {
-			slog.Info(fmt.Sprintf("cluster manager: rebalancing %v to node %s", command.Key, nodeID))
+			slog.Debug(fmt.Sprintf("cluster manager: rebalancing %v to node %s", command.Key, nodeID))
 			if err := stream.Send(command); err != nil {
 				slog.Warn(fmt.Sprintf("cluster manager: rebalance command failed for peer %s, send error: %v", nodeID, err))
 				continue
@@ -352,6 +351,10 @@ func (cm *ClusterManager) Rebalance() {
 			slog.Warn(fmt.Sprintf("cluster manager: rebalance failed for peer %s, close error: %v", nodeID, err))
 			continue
 		}
+	}
+
+	for hash := range deleteList {
+		cm.HashMap.HDel(hash)
 	}
 
 	slog.Debug("cluster manager: rebalancing finished")
