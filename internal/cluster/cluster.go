@@ -274,133 +274,134 @@ func (cm *ClusterManager) MergeState(nodes []*clusterpb.Node) {
 	}
 }
 
+func (cm *ClusterManager) getRebalanceTargets(oldResponsibleNodeIDs, newResponsibleNodeIDs []string) []string {
+	oldSet := make(map[string]struct{}, len(oldResponsibleNodeIDs))
+	for _, id := range oldResponsibleNodeIDs {
+		oldSet[id] = struct{}{}
+	}
+
+	// Collect IDs that are in newIDs but not in oldSet
+	var diff []string
+	for _, id := range newResponsibleNodeIDs {
+		if _, exists := oldSet[id]; !exists {
+			diff = append(diff, id)
+		}
+	}
+
+	return diff
+}
+
+func (cm *ClusterManager) findRebalanceLeader(oldResponsibleNodeIDs, newResponsibleNodeIDs []string) string {
+	// The original leader is the preferred migrator.
+	potentialLeader := oldResponsibleNodeIDs[0]
+	if potentialLeader == cm.NodeID {
+		return potentialLeader
+	}
+
+	// If the original leader is not alive, find the first alive replica from the old set.
+	for _, replicaID := range oldResponsibleNodeIDs[1:] {
+		if replica, ok := cm.GetPeer(replicaID); ok && replica.Alive {
+			return replica.NodeID
+		}
+	}
+
+	// If no old nodes are available, the new leader will have to handle it (though it won't have the data).
+	return newResponsibleNodeIDs[0]
+}
+
+func (cm *ClusterManager) createMigrationCommands(hash string, he *hashmap.HashEntry, targetIDs []string) map[string][]*clusterpb.CommandRequest {
+	commandsByNode := make(map[string][]*clusterpb.CommandRequest)
+	he.Mu.RLock()
+	defer he.Mu.RUnlock()
+
+	for key, entry := range he.Items {
+		ttl := int64(0)
+		if entry.ExpiresAt > 0 {
+			ttl = entry.ExpiresAt - time.Now().Unix()
+		}
+
+		args := make([][]byte, 0)
+		args = append(args, []byte(key))
+		args = append(args, entry.Data)
+		args = append(args, fmt.Appendf(nil, "%d", ttl))
+
+		req := &clusterpb.CommandRequest{
+			Command: "HSET",
+			Key:     hash,
+			Args:    args,
+		}
+
+		for _, nodeID := range targetIDs {
+			if nodeID != cm.NodeID {
+				commandsByNode[nodeID] = append(commandsByNode[nodeID], req)
+			}
+		}
+	}
+
+	return commandsByNode
+}
+
+func (cm *ClusterManager) streamMigrationCommands(nodeID string, commands []*clusterpb.CommandRequest) {
+	slog.Info(fmt.Sprintf("cluster manager: rebalancing %d keys to node %s", len(commands), nodeID))
+	client, ok := cm.GetPeerClient(nodeID)
+	if !ok {
+		slog.Warn(fmt.Sprintf("cluster manager: rebalance command failed for peer %s, client not found", nodeID))
+		return
+	}
+
+	md := metadata.Pairs("replicate", "false")
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	stream, err := client.StreamCommand(ctx)
+	if err != nil {
+		slog.Warn(fmt.Sprintf("cluster manager: rebalance command failed for peer %s, stream error: %v", nodeID, err))
+		return
+	}
+
+	for _, command := range commands {
+		slog.Debug(fmt.Sprintf("cluster manager: rebalancing %v to node %s", command.Key, nodeID))
+		if err := stream.Send(command); err != nil {
+			slog.Warn(fmt.Sprintf("cluster manager: rebalance command failed for peer %s, send error: %v", nodeID, err))
+			continue
+		}
+	}
+
+	if err := stream.CloseSend(); err != nil {
+		slog.Warn(fmt.Sprintf("cluster manager: rebalance failed for peer %s, close error: %v", nodeID, err))
+	}
+}
+
 // Rebalance redistributes keys across the cluster when a new node is added.
 func (cm *ClusterManager) Rebalance(oldRing, newRing *hashring.HashRing) {
 	slog.Debug("cluster manager: rebalancing cluster")
 
-	// Commands to rebalance by node
 	commandsByNode := make(map[string][]*clusterpb.CommandRequest)
 	deleteList := make([]string, 0)
-
-	shouldRebalance := func(oldResponsibleNodeIDs, newResponsibleNodeIDs []string) bool {
-		oldLeader := oldResponsibleNodeIDs[0]
-		newLeader := newResponsibleNodeIDs[0]
-		// Old leader should always rebalance
-		if oldLeader == cm.NodeID {
-			slog.Info("cluster manager: this is the old leader")
-			return true
-		}
-
-		// Fall back is the new leader if used to be a replica
-		if slices.Contains(oldResponsibleNodeIDs, newLeader) {
-			slog.Info("cluster manager: this is the new leader")
-			return newLeader == cm.NodeID
-		}
-
-		// If new leader wasnt a replica before, then whichever is the first old alive replica
-		for _, replicaID := range oldResponsibleNodeIDs {
-			if replica, ok := cm.GetPeer(replicaID); ok {
-				if replica.Alive {
-					return replica.NodeID == cm.NodeID
-				}
-			}
-		}
-
-		// If none of that works I have no idea how this node has the data so just go ahead and replicate it :/
-		return true
-	}
-
-	replicationTargets := func(oldResponsibleNodeIDs, newResponsibleNodeIDs []string) []string {
-		oldSet := make(map[string]struct{}, len(oldResponsibleNodeIDs))
-		for _, id := range oldResponsibleNodeIDs {
-			oldSet[id] = struct{}{}
-		}
-
-		// Collect IDs that are in newIDs but not in oldSet
-		var diff []string
-		for _, id := range newResponsibleNodeIDs {
-			if _, exists := oldSet[id]; !exists {
-				diff = append(diff, id)
-			}
-		}
-
-		return diff
-	}
 
 	cm.HashMap.ScanHash(func(hash string, he *hashmap.HashEntry) {
 		oldResponsibleNodeIDs := oldRing.Get(hash)
 		newResponsibleNodeIDs := newRing.Get(hash)
-		targetIDs := replicationTargets(oldResponsibleNodeIDs, newResponsibleNodeIDs)
+
+		targetIDs := cm.getRebalanceTargets(oldResponsibleNodeIDs, newResponsibleNodeIDs)
 		if len(targetIDs) == 0 {
-			slog.Info("cluster manager: not need to rebalance, data where it needs to be")
-			slog.Info(fmt.Sprintf("cluster manager: old %v - new %v", oldResponsibleNodeIDs, newResponsibleNodeIDs))
 			return
 		}
 
-		shouldRebalance := shouldRebalance(oldResponsibleNodeIDs, newResponsibleNodeIDs)
+		rebalanceLeader := cm.findRebalanceLeader(oldResponsibleNodeIDs, newResponsibleNodeIDs)
 
-		// If should rebalance then create migration commands and group by target node
-		if shouldRebalance {
-			he.Mu.RLock()
-			for key, entry := range he.Items {
-				ttl := int64(0)
-				if entry.ExpiresAt > 0 {
-					ttl = entry.ExpiresAt - time.Now().Unix()
-				}
-
-				args := make([][]byte, 0)
-				args = append(args, []byte(key))
-				args = append(args, entry.Data)
-				args = append(args, fmt.Appendf(nil, "%d", ttl))
-
-				req := &clusterpb.CommandRequest{
-					Command: "HSET",
-					Key:     hash,
-					Args:    args,
-				}
-
-				for _, nodeID := range targetIDs {
-					if nodeID != cm.NodeID {
-						commandsByNode[nodeID] = append(commandsByNode[nodeID], req)
-					}
-				}
+		if rebalanceLeader == cm.NodeID {
+			migrationCommands := cm.createMigrationCommands(hash, he, targetIDs)
+			for nodeID, commands := range migrationCommands {
+				commandsByNode[nodeID] = append(commandsByNode[nodeID], commands...)
 			}
-			he.Mu.RUnlock()
 		}
-		// If this node is not on the new resposible list then add this hash to a delete list for after migration
+
 		if !slices.Contains(newResponsibleNodeIDs, cm.NodeID) {
 			deleteList = append(deleteList, hash)
 		}
 	})
 
 	for nodeID, commands := range commandsByNode {
-		slog.Info(fmt.Sprintf("cluster manager: rebalancing %d keys to node %s", len(commands), nodeID))
-		client, ok := cm.GetPeerClient(nodeID)
-		if !ok {
-			slog.Warn(fmt.Sprintf("cluster manager: rebalance command failed for peer %s, client not found", nodeID))
-			continue
-		}
-
-		md := metadata.Pairs("replicate", "false")
-		ctx := metadata.NewOutgoingContext(context.Background(), md)
-		stream, err := client.StreamCommand(ctx)
-		if err != nil {
-			slog.Warn(fmt.Sprintf("cluster manager: rebalance command failed for peer %s, stream error: %v", nodeID, err))
-			continue
-		}
-
-		for _, command := range commands {
-			slog.Debug(fmt.Sprintf("cluster manager: rebalancing %v to node %s", command.Key, nodeID))
-			if err := stream.Send(command); err != nil {
-				slog.Warn(fmt.Sprintf("cluster manager: rebalance command failed for peer %s, send error: %v", nodeID, err))
-				continue
-			}
-		}
-
-		if err := stream.CloseSend(); err != nil {
-			slog.Warn(fmt.Sprintf("cluster manager: rebalance failed for peer %s, close error: %v", nodeID, err))
-			continue
-		}
+		cm.streamMigrationCommands(nodeID, commands)
 	}
 
 	for _, hash := range deleteList {
