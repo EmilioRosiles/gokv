@@ -6,6 +6,7 @@ import (
 	"hash/crc32"
 	"hash/fnv"
 	"log/slog"
+	"maps"
 	"sort"
 	"strconv"
 	"sync"
@@ -16,13 +17,12 @@ type HashFunc func(data []byte) uint32
 // Consistent Hashing implementation. Dictates how the keys are distributed in the Cluster.
 // This algorith minimizes key redistribution if the cluster state changes
 type HashRing struct {
-	mu          sync.RWMutex
-	hash        HashFunc
-	vNodeCount  int
-	Replicas    int
-	keys        []int
-	hashMap     map[int]string
-	LastVersion uint64
+	mu         sync.RWMutex
+	hash       HashFunc
+	vNodeCount int
+	Replicas   int
+	keys       []int
+	hashMap    map[int]string
 }
 
 // Creates new hashring
@@ -129,15 +129,21 @@ func (h *HashRing) GetVersion() uint64 {
 	return hasher.Sum64()
 }
 
-func (h *HashRing) GetLastVersion() uint64 {
+// Returns a copy of the hashring
+func (h *HashRing) Copy() *HashRing {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	return h.LastVersion
-}
 
-func (h *HashRing) CommitVersion() {
-	currentVersion := h.GetVersion()
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.LastVersion = currentVersion
+	newRing := &HashRing{
+		hash:       h.hash,
+		vNodeCount: h.vNodeCount,
+		Replicas:   h.Replicas,
+		keys:       make([]int, len(h.keys)),
+		hashMap:    make(map[int]string),
+	}
+
+	copy(newRing.keys, h.keys)
+	maps.Copy(newRing.hashMap, h.hashMap)
+
+	return newRing
 }

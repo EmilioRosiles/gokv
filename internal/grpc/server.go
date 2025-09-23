@@ -58,12 +58,11 @@ func StartGrpcServer(env *environment.Environment, cm *cluster.ClusterManager) {
 // It merges the state of the incoming node and its peers with the current node's state.
 func (s *clusterNodeServer) Heartbeat(ctx context.Context, req *clusterpb.HeartbeatRequest) (*clusterpb.HeartbeatResponse, error) {
 	slog.Debug("gRPC server: received heartbeat")
+	old := s.cm.HashRing.Copy()
 	s.cm.MergeState(req.Peers)
-	next := s.cm.HashRing.GetVersion()
-	prev := s.cm.HashRing.GetLastVersion()
-	if next != prev {
-		s.cm.HashRing.CommitVersion()
-		go s.cm.Rebalance()
+	new := s.cm.HashRing
+	if new.GetVersion() != old.GetVersion() {
+		go s.cm.Rebalance(old, new)
 	}
 
 	s.cm.Mu.RLock()

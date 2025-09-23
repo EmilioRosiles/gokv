@@ -32,6 +32,8 @@ services:
     
   gokv2:
     <<: *gokv-base
+    ports:
+      - "50052:50051"
     environment:
       NODE_ID: "gokv2"
       HOST: "gokv2"
@@ -46,6 +48,8 @@ services:
 
   gokv3:
     <<: *gokv-base
+    ports:
+      - "50053:50051"
     environment:
       NODE_ID: "gokv3"
       HOST: "gokv3"
