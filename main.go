@@ -27,8 +27,9 @@ func main() {
 	// Create a new cluster manager.
 	cm := cluster.NewClusterManager(env, cfg)
 
-	// Start the gRPC server in a new goroutine.
-	go grpc.StartGrpcServer(env, cm)
+	// Start the gRPC internal and external servers.
+	go grpc.StartInternalServer(env, cm)
+	go grpc.StartExternalServer(env, cm)
 
 	// If a seed node is provided, add it to the cluster and send a heartbeat.
 	if env.SeedNodeID != "" && env.SeedNodeAddr != "" {

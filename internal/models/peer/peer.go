@@ -1,9 +1,8 @@
 package peer
 
 import (
+	"gokv/proto/commonpb"
 	"time"
-
-	"gokv/proto/clusterpb"
 )
 
 type Peer struct {
@@ -13,8 +12,8 @@ type Peer struct {
 	LastSeen time.Time
 }
 
-func ToProto(entry Peer) *clusterpb.Node {
-	return &clusterpb.Node{
+func ToProto(entry Peer) *commonpb.Node {
+	return &commonpb.Node{
 		NodeId:   entry.NodeID,
 		NodeAddr: entry.NodeAddr,
 		Alive:    entry.Alive,
@@ -22,7 +21,7 @@ func ToProto(entry Peer) *clusterpb.Node {
 	}
 }
 
-func FromProto(p *clusterpb.Node) Peer {
+func FromProto(p *commonpb.Node) Peer {
 	return Peer{
 		NodeID:   p.NodeId,
 		NodeAddr: p.NodeAddr,
@@ -31,15 +30,15 @@ func FromProto(p *clusterpb.Node) Peer {
 	}
 }
 
-func ToProtoList(entries []Peer) []*clusterpb.Node {
-	protoEntries := make([]*clusterpb.Node, len(entries))
+func ToProtoList(entries []Peer) []*commonpb.Node {
+	protoEntries := make([]*commonpb.Node, len(entries))
 	for i, e := range entries {
 		protoEntries[i] = ToProto(e)
 	}
 	return protoEntries
 }
 
-func FromProtoList(pl []*clusterpb.Node) []Peer {
+func FromProtoList(pl []*commonpb.Node) []Peer {
 	entries := make([]Peer, len(pl))
 	for i, p := range pl {
 		entries[i] = FromProto(p)

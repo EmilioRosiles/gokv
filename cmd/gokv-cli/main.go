@@ -7,7 +7,8 @@ import (
 	"os"
 	"time"
 
-	"gokv/proto/clusterpb"
+	"gokv/proto/commonpb"
+	"gokv/proto/externalpb"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
@@ -37,14 +38,14 @@ var statusCmd = &cobra.Command{
 		}
 		defer conn.Close()
 
-		client := clusterpb.NewClusterNodeClient(conn)
+		client := externalpb.NewExternalServerClient(conn)
 
-		req := &clusterpb.HeartbeatRequest{}
+		req := &externalpb.HealthcheckRequest{}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		res, err := client.Heartbeat(ctx, req)
+		res, err := client.Healthcheck(ctx, req)
 		if err != nil {
 			log.Fatalf("Failed to get status: %v", err)
 		}
@@ -67,7 +68,7 @@ var runCmd = &cobra.Command{
 		}
 		defer conn.Close()
 
-		client := clusterpb.NewClusterNodeClient(conn)
+		client := externalpb.NewExternalServerClient(conn)
 
 		command := args[0]
 		key := args[1]
@@ -76,7 +77,7 @@ var runCmd = &cobra.Command{
 			cmdArgs = append(cmdArgs, []byte(arg))
 		}
 
-		req := &clusterpb.CommandRequest{
+		req := &commonpb.CommandRequest{
 			Command: command,
 			Key:     key,
 			Args:    cmdArgs,
@@ -95,18 +96,18 @@ var runCmd = &cobra.Command{
 		}
 
 		switch r := res.Response.(type) {
-		case *clusterpb.CommandResponse_Value:
+		case *commonpb.CommandResponse_Value:
 			fmt.Printf("Result: %s\n", string(r.Value))
-		case *clusterpb.CommandResponse_Success:
+		case *commonpb.CommandResponse_Success:
 			fmt.Printf("Success: %t\n", r.Success)
-		case *clusterpb.CommandResponse_Count:
+		case *commonpb.CommandResponse_Count:
 			fmt.Printf("Count: %d\n", r.Count)
-		case *clusterpb.CommandResponse_List:
+		case *commonpb.CommandResponse_List:
 			fmt.Printf("List: \n")
 			for _, kv := range r.List.List {
 				fmt.Printf("  - %s: %s\n", kv.Key, string(kv.Value))
 			}
-		case *clusterpb.CommandResponse_Map:
+		case *commonpb.CommandResponse_Map:
 			fmt.Printf("Map: \n")
 			for key, kvList := range r.Map.Map {
 				fmt.Printf("  - %s:\n", key)

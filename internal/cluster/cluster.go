@@ -18,12 +18,12 @@ import (
 	"gokv/internal/models/peer"
 	"gokv/internal/pool"
 	"gokv/internal/response"
-	"gokv/proto/clusterpb"
+	"gokv/proto/commonpb"
+	"gokv/proto/internalpb"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 )
 
 // ClusterManager manages the cluster state, including node information, peer list, data store, and hash ring.
@@ -131,7 +131,7 @@ func (cm *ClusterManager) GetPeer(nodeID string) (*peer.Peer, bool) {
 }
 
 // GetPeerClient returns a gRPC client for a given peer ID.
-func (cm *ClusterManager) GetPeerClient(nodeID string) (clusterpb.ClusterNodeClient, bool) {
+func (cm *ClusterManager) GetPeerClient(nodeID string) (internalpb.InternalServerClient, bool) {
 	peer, ok := cm.GetPeer(nodeID)
 	if !ok {
 		return nil, false
@@ -142,7 +142,7 @@ func (cm *ClusterManager) GetPeerClient(nodeID string) (clusterpb.ClusterNodeCli
 		return nil, false
 	}
 
-	return clusterpb.NewClusterNodeClient(conn), true
+	return internalpb.NewInternalServerClient(conn), true
 }
 
 // AlivePeers returns the number of alive peers in the cluster.
@@ -222,15 +222,15 @@ func (cm *ClusterManager) Heartbeat(peerList ...*peer.Peer) {
 		}
 
 		cm.Mu.RLock()
-		self := &clusterpb.Node{NodeId: cm.NodeID, NodeAddr: cm.NodeAddr, Alive: true, LastSeen: time.Now().Unix()}
-		peerspb := make([]*clusterpb.Node, 0, len(cm.PeerMap)+1)
+		self := &commonpb.Node{NodeId: cm.NodeID, NodeAddr: cm.NodeAddr, Alive: true, LastSeen: time.Now().Unix()}
+		peerspb := make([]*commonpb.Node, 0, len(cm.PeerMap)+1)
 		peerspb = append(peerspb, self)
 		for _, peerToAdd := range cm.PeerMap {
 			peerspb = append(peerspb, peer.ToProto(*peerToAdd))
 		}
 		cm.Mu.RUnlock()
 
-		req := &clusterpb.HeartbeatRequest{Peers: peerspb}
+		req := &internalpb.HeartbeatRequest{Peers: peerspb}
 
 		res, err := client.Heartbeat(context.Background(), req)
 		if err != nil {
@@ -244,7 +244,7 @@ func (cm *ClusterManager) Heartbeat(peerList ...*peer.Peer) {
 }
 
 // MergeState merges the state of a slice of peers with the cluster state.
-func (cm *ClusterManager) MergeState(nodes []*clusterpb.Node) {
+func (cm *ClusterManager) MergeState(nodes []*commonpb.Node) {
 	for _, remoteNode := range nodes {
 
 		if remoteNode.NodeId == cm.NodeID {
@@ -274,7 +274,8 @@ func (cm *ClusterManager) MergeState(nodes []*clusterpb.Node) {
 	}
 }
 
-func (cm *ClusterManager) getRebalanceTargets(oldResponsibleNodeIDs, newResponsibleNodeIDs []string) []string {
+// Finds migration targets by comparing the old and new responsible nodes
+func (cm *ClusterManager) getMigrationTargets(oldResponsibleNodeIDs, newResponsibleNodeIDs []string) []string {
 	oldSet := make(map[string]struct{}, len(oldResponsibleNodeIDs))
 	for _, id := range oldResponsibleNodeIDs {
 		oldSet[id] = struct{}{}
@@ -291,16 +292,17 @@ func (cm *ClusterManager) getRebalanceTargets(oldResponsibleNodeIDs, newResponsi
 	return diff
 }
 
-func (cm *ClusterManager) findRebalanceLeader(oldResponsibleNodeIDs, newResponsibleNodeIDs []string) string {
+// Finds migration leader to avoid unnecessary network traffic
+func (cm *ClusterManager) findMigrationLeader(oldResponsibleNodeIDs, newResponsibleNodeIDs []string) string {
 	// The original leader is the preferred migrator.
-	potentialLeader := oldResponsibleNodeIDs[0]
-	if potentialLeader == cm.NodeID {
-		return potentialLeader
+	oldLeader := oldResponsibleNodeIDs[0]
+	if leader, ok := cm.GetPeer(oldLeader); oldLeader == cm.NodeID || (ok && leader.Alive) {
+		return oldLeader
 	}
 
 	// If the original leader is not alive, find the first alive replica from the old set.
 	for _, replicaID := range oldResponsibleNodeIDs[1:] {
-		if replica, ok := cm.GetPeer(replicaID); ok && replica.Alive {
+		if replica, ok := cm.GetPeer(replicaID); replicaID == cm.NodeID || (ok && replica.Alive) {
 			return replica.NodeID
 		}
 	}
@@ -309,8 +311,9 @@ func (cm *ClusterManager) findRebalanceLeader(oldResponsibleNodeIDs, newResponsi
 	return newResponsibleNodeIDs[0]
 }
 
-func (cm *ClusterManager) createMigrationCommands(hash string, he *hashmap.HashEntry, targetIDs []string) map[string][]*clusterpb.CommandRequest {
-	commandsByNode := make(map[string][]*clusterpb.CommandRequest)
+// Creates migration commands for HSET and groups them by target node.
+func (cm *ClusterManager) createMigrationCommands(hash string, he *hashmap.HashEntry, targetIDs []string) map[string][]*commonpb.CommandRequest {
+	commandsByNode := make(map[string][]*commonpb.CommandRequest)
 	he.Mu.RLock()
 	defer he.Mu.RUnlock()
 
@@ -325,7 +328,7 @@ func (cm *ClusterManager) createMigrationCommands(hash string, he *hashmap.HashE
 		args = append(args, entry.Data)
 		args = append(args, fmt.Appendf(nil, "%d", ttl))
 
-		req := &clusterpb.CommandRequest{
+		req := &commonpb.CommandRequest{
 			Command: "HSET",
 			Key:     hash,
 			Args:    args,
@@ -341,7 +344,8 @@ func (cm *ClusterManager) createMigrationCommands(hash string, he *hashmap.HashE
 	return commandsByNode
 }
 
-func (cm *ClusterManager) streamMigrationCommands(nodeID string, commands []*clusterpb.CommandRequest) {
+// Batch streams commands to new owners
+func (cm *ClusterManager) streamMigrationCommands(nodeID string, commands []*commonpb.CommandRequest) {
 	slog.Info(fmt.Sprintf("cluster manager: rebalancing %d keys to node %s", len(commands), nodeID))
 	client, ok := cm.GetPeerClient(nodeID)
 	if !ok {
@@ -349,17 +353,19 @@ func (cm *ClusterManager) streamMigrationCommands(nodeID string, commands []*clu
 		return
 	}
 
-	md := metadata.Pairs("replicate", "false")
-	ctx := metadata.NewOutgoingContext(context.Background(), md)
-	stream, err := client.StreamCommand(ctx)
+	ctx := context.Background()
+	stream, err := client.Rebalance(ctx)
 	if err != nil {
 		slog.Warn(fmt.Sprintf("cluster manager: rebalance command failed for peer %s, stream error: %v", nodeID, err))
 		return
 	}
 
-	for _, command := range commands {
-		slog.Debug(fmt.Sprintf("cluster manager: rebalancing %v to node %s", command.Key, nodeID))
-		if err := stream.Send(command); err != nil {
+	batchSize := 100
+	for i := 0; i < len(commands); i += batchSize {
+		end := min(i+batchSize, len(commands))
+		batch := &internalpb.RebalanceRequest{Commands: commands[i:end]}
+		slog.Debug(fmt.Sprintf("cluster manager: rebalancing %v keys to node %s", len(batch.Commands), nodeID))
+		if err := stream.Send(batch); err != nil {
 			slog.Warn(fmt.Sprintf("cluster manager: rebalance command failed for peer %s, send error: %v", nodeID, err))
 			continue
 		}
@@ -370,23 +376,23 @@ func (cm *ClusterManager) streamMigrationCommands(nodeID string, commands []*clu
 	}
 }
 
-// Rebalance redistributes keys across the cluster when a new node is added.
+// Rebalance redistributes keys across the cluster when the state changes.
 func (cm *ClusterManager) Rebalance(oldRing, newRing *hashring.HashRing) {
 	slog.Debug("cluster manager: rebalancing cluster")
 
-	commandsByNode := make(map[string][]*clusterpb.CommandRequest)
+	commandsByNode := make(map[string][]*commonpb.CommandRequest)
 	deleteList := make([]string, 0)
 
 	cm.HashMap.ScanHash(func(hash string, he *hashmap.HashEntry) {
 		oldResponsibleNodeIDs := oldRing.Get(hash)
 		newResponsibleNodeIDs := newRing.Get(hash)
 
-		targetIDs := cm.getRebalanceTargets(oldResponsibleNodeIDs, newResponsibleNodeIDs)
+		targetIDs := cm.getMigrationTargets(oldResponsibleNodeIDs, newResponsibleNodeIDs)
 		if len(targetIDs) == 0 {
 			return
 		}
 
-		rebalanceLeader := cm.findRebalanceLeader(oldResponsibleNodeIDs, newResponsibleNodeIDs)
+		rebalanceLeader := cm.findMigrationLeader(oldResponsibleNodeIDs, newResponsibleNodeIDs)
 
 		if rebalanceLeader == cm.NodeID {
 			migrationCommands := cm.createMigrationCommands(hash, he, targetIDs)
@@ -411,63 +417,37 @@ func (cm *ClusterManager) Rebalance(oldRing, newRing *hashring.HashRing) {
 	slog.Debug("cluster manager: rebalancing finished")
 }
 
-// RunCommand executes a command, either locally (then replicate if applicable) or by forwarding it to a responsible node.
-func (cm *ClusterManager) RunCommand(ctx context.Context, req *clusterpb.CommandRequest, replicate bool) (any, error) {
-	responsibleNodeIDs := cm.HashRing.Get(req.Key)
-	slog.Debug(fmt.Sprintf("cluster manager: run command responsible nodes: %v", responsibleNodeIDs))
-	isPrimary := responsibleNodeIDs[0] == cm.NodeID
-	isReplicaReq := !replicate && slices.Contains(responsibleNodeIDs[1:], cm.NodeID)
-	if isPrimary || isReplicaReq {
-		// Execute the command locally.
-		cmd, ok := cm.CommandRegistry.Get(req.Command)
-		if !ok {
-			return nil, fmt.Errorf("cluster manager: unknown command: %s", req.Command)
-		}
-		slog.Debug(fmt.Sprintf("cluster manager: run command %s locally for key: %v", req.Command, req.Key))
-		res, err := cmd.Run(req.Key, req.Args...)
-		if !isReplicaReq && cmd.Level == command.Replica {
-			go cm.ReplicateCommand(req)
-		}
-		return res, err
-	} else {
-		// Forward the command to a responsible node.
-		responsibleNodeID := responsibleNodeIDs[0]
-		client, ok := cm.GetPeerClient(responsibleNodeID)
-		if !ok {
-			slog.Warn(fmt.Sprintf("cluster manager: failed to get client for node %s", responsibleNodeID))
-			cm.RemoveNode(responsibleNodeID)
-			slog.Debug("cluster manager: attempting to run command again")
-			return cm.RunCommand(ctx, req, replicate)
-		}
-		slog.Debug(fmt.Sprintf("cluster manager: forwarding command %s to node %v for key: %v", req.Command, responsibleNodeID, req.Key))
-		res, err := client.RunCommand(ctx, req)
-		if err != nil {
-			slog.Warn(fmt.Sprintf("cluster manager: failed to forward command to node %s: %v", responsibleNodeID, err))
-			cm.RemoveNode(responsibleNodeID)
-			slog.Debug("cluster manager: attempting to run command again")
-			return cm.RunCommand(ctx, req, replicate)
-		}
-		return response.Unmarshal(res)
+// Runs a command locally, does not check for responsibility.
+func (cm *ClusterManager) RunCommand(ctx context.Context, req *commonpb.CommandRequest) (any, error) {
+	cmd, ok := cm.CommandRegistry.Get(req.Command)
+	if !ok {
+		return nil, fmt.Errorf("unknown command: %s", req.Command)
 	}
+	return cmd.Run(req.Key, req.Args...)
 }
 
-// Replicate command to replicas
-func (cm *ClusterManager) ReplicateCommand(req *clusterpb.CommandRequest) {
+// Forwards command to a replica, forwarded comands only attempt to run locally and do not trigger replication.
+func (cm *ClusterManager) ForwardCommand(ctx context.Context, req *commonpb.CommandRequest, nodeID string) (any, error) {
+	client, ok := cm.GetPeerClient(nodeID)
+	if !ok {
+		return nil, fmt.Errorf("cluster manager: failed to get client for node %s", nodeID)
+	}
+	slog.Debug(fmt.Sprintf("cluster manager: forwarding command %s to node %v for key: %v", req.Command, nodeID, req.Key))
+	res, err := client.ForwardCommand(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("cluster manager: failed to forward command to node %s: %v", nodeID, err)
+	}
+	return response.Unmarshal(res)
+}
+
+// Sync command with replicas using forward command.
+func (cm *ClusterManager) ReplicateCommand(req *commonpb.CommandRequest) {
 	responsibleNodeIDs := cm.HashRing.Get(req.Key)
+	ctx := context.Background()
 	for _, nodeID := range responsibleNodeIDs[1:] {
-		client, ok := cm.GetPeerClient(nodeID)
-		if !ok {
-			slog.Warn(fmt.Sprintf("cluster manager: error replicating command to node %s: no client found", nodeID))
-			cm.RemoveNode(nodeID)
-			continue
-		}
-		md := metadata.Pairs("replicate", "false")
-		ctx := metadata.NewOutgoingContext(context.Background(), md)
-		slog.Debug(fmt.Sprintf("cluster manager: command %s for key %s replicated to node %s", req.Command, req.Key, nodeID))
-		_, err := client.RunCommand(ctx, req)
+		_, err := cm.ForwardCommand(ctx, req, nodeID)
 		if err != nil {
-			slog.Warn(fmt.Sprintf("cluster manager: error replicating command to node %s: %v", nodeID, err))
-			cm.RemoveNode(nodeID)
+			slog.Warn(fmt.Sprintf("cluster manager: error replicating commnad %s to node %v", req.Command, nodeID))
 			continue
 		}
 	}

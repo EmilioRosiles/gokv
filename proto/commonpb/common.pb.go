@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.36.8
 // 	protoc        v4.24.4
-// source: proto/clusterpb/cluster.proto
+// source: commonpb/common.proto
 
-package clusterpb
+package commonpb
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -33,7 +33,7 @@ type Node struct {
 
 func (x *Node) Reset() {
 	*x = Node{}
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[0]
+	mi := &file_commonpb_common_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -45,7 +45,7 @@ func (x *Node) String() string {
 func (*Node) ProtoMessage() {}
 
 func (x *Node) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[0]
+	mi := &file_commonpb_common_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -58,7 +58,7 @@ func (x *Node) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Node.ProtoReflect.Descriptor instead.
 func (*Node) Descriptor() ([]byte, []int) {
-	return file_proto_clusterpb_cluster_proto_rawDescGZIP(), []int{0}
+	return file_commonpb_common_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Node) GetNodeId() string {
@@ -89,94 +89,6 @@ func (x *Node) GetLastSeen() int64 {
 	return 0
 }
 
-type HeartbeatRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Peers         []*Node                `protobuf:"bytes,1,rep,name=peers,proto3" json:"peers,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *HeartbeatRequest) Reset() {
-	*x = HeartbeatRequest{}
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *HeartbeatRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*HeartbeatRequest) ProtoMessage() {}
-
-func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use HeartbeatRequest.ProtoReflect.Descriptor instead.
-func (*HeartbeatRequest) Descriptor() ([]byte, []int) {
-	return file_proto_clusterpb_cluster_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *HeartbeatRequest) GetPeers() []*Node {
-	if x != nil {
-		return x.Peers
-	}
-	return nil
-}
-
-type HeartbeatResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Peers         []*Node                `protobuf:"bytes,1,rep,name=peers,proto3" json:"peers,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *HeartbeatResponse) Reset() {
-	*x = HeartbeatResponse{}
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *HeartbeatResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*HeartbeatResponse) ProtoMessage() {}
-
-func (x *HeartbeatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use HeartbeatResponse.ProtoReflect.Descriptor instead.
-func (*HeartbeatResponse) Descriptor() ([]byte, []int) {
-	return file_proto_clusterpb_cluster_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *HeartbeatResponse) GetPeers() []*Node {
-	if x != nil {
-		return x.Peers
-	}
-	return nil
-}
-
 type KeyValue struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
@@ -187,7 +99,7 @@ type KeyValue struct {
 
 func (x *KeyValue) Reset() {
 	*x = KeyValue{}
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[3]
+	mi := &file_commonpb_common_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -199,7 +111,7 @@ func (x *KeyValue) String() string {
 func (*KeyValue) ProtoMessage() {}
 
 func (x *KeyValue) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[3]
+	mi := &file_commonpb_common_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -212,7 +124,7 @@ func (x *KeyValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KeyValue.ProtoReflect.Descriptor instead.
 func (*KeyValue) Descriptor() ([]byte, []int) {
-	return file_proto_clusterpb_cluster_proto_rawDescGZIP(), []int{3}
+	return file_commonpb_common_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *KeyValue) GetKey() string {
@@ -238,7 +150,7 @@ type KeyValueList struct {
 
 func (x *KeyValueList) Reset() {
 	*x = KeyValueList{}
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[4]
+	mi := &file_commonpb_common_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -250,7 +162,7 @@ func (x *KeyValueList) String() string {
 func (*KeyValueList) ProtoMessage() {}
 
 func (x *KeyValueList) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[4]
+	mi := &file_commonpb_common_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -263,7 +175,7 @@ func (x *KeyValueList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KeyValueList.ProtoReflect.Descriptor instead.
 func (*KeyValueList) Descriptor() ([]byte, []int) {
-	return file_proto_clusterpb_cluster_proto_rawDescGZIP(), []int{4}
+	return file_commonpb_common_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *KeyValueList) GetList() []*KeyValue {
@@ -282,7 +194,7 @@ type KeyValueMap struct {
 
 func (x *KeyValueMap) Reset() {
 	*x = KeyValueMap{}
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[5]
+	mi := &file_commonpb_common_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -294,7 +206,7 @@ func (x *KeyValueMap) String() string {
 func (*KeyValueMap) ProtoMessage() {}
 
 func (x *KeyValueMap) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[5]
+	mi := &file_commonpb_common_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -307,7 +219,7 @@ func (x *KeyValueMap) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KeyValueMap.ProtoReflect.Descriptor instead.
 func (*KeyValueMap) Descriptor() ([]byte, []int) {
-	return file_proto_clusterpb_cluster_proto_rawDescGZIP(), []int{5}
+	return file_commonpb_common_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *KeyValueMap) GetMap() map[string]*KeyValueList {
@@ -328,7 +240,7 @@ type CommandRequest struct {
 
 func (x *CommandRequest) Reset() {
 	*x = CommandRequest{}
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[6]
+	mi := &file_commonpb_common_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -340,7 +252,7 @@ func (x *CommandRequest) String() string {
 func (*CommandRequest) ProtoMessage() {}
 
 func (x *CommandRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[6]
+	mi := &file_commonpb_common_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -353,7 +265,7 @@ func (x *CommandRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommandRequest.ProtoReflect.Descriptor instead.
 func (*CommandRequest) Descriptor() ([]byte, []int) {
-	return file_proto_clusterpb_cluster_proto_rawDescGZIP(), []int{6}
+	return file_commonpb_common_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *CommandRequest) GetCommand() string {
@@ -394,7 +306,7 @@ type CommandResponse struct {
 
 func (x *CommandResponse) Reset() {
 	*x = CommandResponse{}
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[7]
+	mi := &file_commonpb_common_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -406,7 +318,7 @@ func (x *CommandResponse) String() string {
 func (*CommandResponse) ProtoMessage() {}
 
 func (x *CommandResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_clusterpb_cluster_proto_msgTypes[7]
+	mi := &file_commonpb_common_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -419,7 +331,7 @@ func (x *CommandResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommandResponse.ProtoReflect.Descriptor instead.
 func (*CommandResponse) Descriptor() ([]byte, []int) {
-	return file_proto_clusterpb_cluster_proto_rawDescGZIP(), []int{7}
+	return file_commonpb_common_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CommandResponse) GetError() string {
@@ -515,100 +427,81 @@ func (*CommandResponse_List) isCommandResponse_Response() {}
 
 func (*CommandResponse_Map) isCommandResponse_Response() {}
 
-var File_proto_clusterpb_cluster_proto protoreflect.FileDescriptor
+var File_commonpb_common_proto protoreflect.FileDescriptor
 
-const file_proto_clusterpb_cluster_proto_rawDesc = "" +
+const file_commonpb_common_proto_rawDesc = "" +
 	"\n" +
-	"\x1dproto/clusterpb/cluster.proto\x12\tclusterpb\"o\n" +
+	"\x15commonpb/common.proto\x12\bcommonpb\"o\n" +
 	"\x04Node\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x1b\n" +
 	"\tnode_addr\x18\x02 \x01(\tR\bnodeAddr\x12\x14\n" +
 	"\x05alive\x18\x03 \x01(\bR\x05alive\x12\x1b\n" +
-	"\tlast_seen\x18\x04 \x01(\x03R\blastSeen\"9\n" +
-	"\x10HeartbeatRequest\x12%\n" +
-	"\x05peers\x18\x01 \x03(\v2\x0f.clusterpb.NodeR\x05peers\":\n" +
-	"\x11HeartbeatResponse\x12%\n" +
-	"\x05peers\x18\x01 \x03(\v2\x0f.clusterpb.NodeR\x05peers\"2\n" +
+	"\tlast_seen\x18\x04 \x01(\x03R\blastSeen\"2\n" +
 	"\bKeyValue\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\fR\x05value\"7\n" +
-	"\fKeyValueList\x12'\n" +
-	"\x04list\x18\x01 \x03(\v2\x13.clusterpb.KeyValueR\x04list\"\x91\x01\n" +
-	"\vKeyValueMap\x121\n" +
-	"\x03map\x18\x01 \x03(\v2\x1f.clusterpb.KeyValueMap.MapEntryR\x03map\x1aO\n" +
+	"\x05value\x18\x02 \x01(\fR\x05value\"6\n" +
+	"\fKeyValueList\x12&\n" +
+	"\x04list\x18\x01 \x03(\v2\x12.commonpb.KeyValueR\x04list\"\x8f\x01\n" +
+	"\vKeyValueMap\x120\n" +
+	"\x03map\x18\x01 \x03(\v2\x1e.commonpb.KeyValueMap.MapEntryR\x03map\x1aN\n" +
 	"\bMapEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12-\n" +
-	"\x05value\x18\x02 \x01(\v2\x17.clusterpb.KeyValueListR\x05value:\x028\x01\"P\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.commonpb.KeyValueListR\x05value:\x028\x01\"P\n" +
 	"\x0eCommandRequest\x12\x18\n" +
 	"\acommand\x18\x01 \x01(\tR\acommand\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12\x12\n" +
-	"\x04args\x18\x03 \x03(\fR\x04args\"\xda\x01\n" +
+	"\x04args\x18\x03 \x03(\fR\x04args\"\xd8\x01\n" +
 	"\x0fCommandResponse\x12\x14\n" +
 	"\x05error\x18\x01 \x01(\tR\x05error\x12\x16\n" +
 	"\x05value\x18\x02 \x01(\fH\x00R\x05value\x12\x1a\n" +
 	"\asuccess\x18\x03 \x01(\bH\x00R\asuccess\x12\x16\n" +
-	"\x05count\x18\x04 \x01(\x03H\x00R\x05count\x12-\n" +
-	"\x04list\x18\x05 \x01(\v2\x17.clusterpb.KeyValueListH\x00R\x04list\x12*\n" +
-	"\x03map\x18\x06 \x01(\v2\x16.clusterpb.KeyValueMapH\x00R\x03mapB\n" +
+	"\x05count\x18\x04 \x01(\x03H\x00R\x05count\x12,\n" +
+	"\x04list\x18\x05 \x01(\v2\x16.commonpb.KeyValueListH\x00R\x04list\x12)\n" +
+	"\x03map\x18\x06 \x01(\v2\x15.commonpb.KeyValueMapH\x00R\x03mapB\n" +
 	"\n" +
-	"\bresponse2\xe6\x01\n" +
-	"\vClusterNode\x12F\n" +
-	"\tHeartbeat\x12\x1b.clusterpb.HeartbeatRequest\x1a\x1c.clusterpb.HeartbeatResponse\x12C\n" +
-	"\n" +
-	"RunCommand\x12\x19.clusterpb.CommandRequest\x1a\x1a.clusterpb.CommandResponse\x12J\n" +
-	"\rStreamCommand\x12\x19.clusterpb.CommandRequest\x1a\x1a.clusterpb.CommandResponse(\x010\x01B\rZ\v./clusterpbb\x06proto3"
+	"\bresponseB\x1eZ\x1cgokv/proto/commonpb;commonpbb\x06proto3"
 
 var (
-	file_proto_clusterpb_cluster_proto_rawDescOnce sync.Once
-	file_proto_clusterpb_cluster_proto_rawDescData []byte
+	file_commonpb_common_proto_rawDescOnce sync.Once
+	file_commonpb_common_proto_rawDescData []byte
 )
 
-func file_proto_clusterpb_cluster_proto_rawDescGZIP() []byte {
-	file_proto_clusterpb_cluster_proto_rawDescOnce.Do(func() {
-		file_proto_clusterpb_cluster_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_clusterpb_cluster_proto_rawDesc), len(file_proto_clusterpb_cluster_proto_rawDesc)))
+func file_commonpb_common_proto_rawDescGZIP() []byte {
+	file_commonpb_common_proto_rawDescOnce.Do(func() {
+		file_commonpb_common_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_commonpb_common_proto_rawDesc), len(file_commonpb_common_proto_rawDesc)))
 	})
-	return file_proto_clusterpb_cluster_proto_rawDescData
+	return file_commonpb_common_proto_rawDescData
 }
 
-var file_proto_clusterpb_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
-var file_proto_clusterpb_cluster_proto_goTypes = []any{
-	(*Node)(nil),              // 0: clusterpb.Node
-	(*HeartbeatRequest)(nil),  // 1: clusterpb.HeartbeatRequest
-	(*HeartbeatResponse)(nil), // 2: clusterpb.HeartbeatResponse
-	(*KeyValue)(nil),          // 3: clusterpb.KeyValue
-	(*KeyValueList)(nil),      // 4: clusterpb.KeyValueList
-	(*KeyValueMap)(nil),       // 5: clusterpb.KeyValueMap
-	(*CommandRequest)(nil),    // 6: clusterpb.CommandRequest
-	(*CommandResponse)(nil),   // 7: clusterpb.CommandResponse
-	nil,                       // 8: clusterpb.KeyValueMap.MapEntry
+var file_commonpb_common_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_commonpb_common_proto_goTypes = []any{
+	(*Node)(nil),            // 0: commonpb.Node
+	(*KeyValue)(nil),        // 1: commonpb.KeyValue
+	(*KeyValueList)(nil),    // 2: commonpb.KeyValueList
+	(*KeyValueMap)(nil),     // 3: commonpb.KeyValueMap
+	(*CommandRequest)(nil),  // 4: commonpb.CommandRequest
+	(*CommandResponse)(nil), // 5: commonpb.CommandResponse
+	nil,                     // 6: commonpb.KeyValueMap.MapEntry
 }
-var file_proto_clusterpb_cluster_proto_depIdxs = []int32{
-	0,  // 0: clusterpb.HeartbeatRequest.peers:type_name -> clusterpb.Node
-	0,  // 1: clusterpb.HeartbeatResponse.peers:type_name -> clusterpb.Node
-	3,  // 2: clusterpb.KeyValueList.list:type_name -> clusterpb.KeyValue
-	8,  // 3: clusterpb.KeyValueMap.map:type_name -> clusterpb.KeyValueMap.MapEntry
-	4,  // 4: clusterpb.CommandResponse.list:type_name -> clusterpb.KeyValueList
-	5,  // 5: clusterpb.CommandResponse.map:type_name -> clusterpb.KeyValueMap
-	4,  // 6: clusterpb.KeyValueMap.MapEntry.value:type_name -> clusterpb.KeyValueList
-	1,  // 7: clusterpb.ClusterNode.Heartbeat:input_type -> clusterpb.HeartbeatRequest
-	6,  // 8: clusterpb.ClusterNode.RunCommand:input_type -> clusterpb.CommandRequest
-	6,  // 9: clusterpb.ClusterNode.StreamCommand:input_type -> clusterpb.CommandRequest
-	2,  // 10: clusterpb.ClusterNode.Heartbeat:output_type -> clusterpb.HeartbeatResponse
-	7,  // 11: clusterpb.ClusterNode.RunCommand:output_type -> clusterpb.CommandResponse
-	7,  // 12: clusterpb.ClusterNode.StreamCommand:output_type -> clusterpb.CommandResponse
-	10, // [10:13] is the sub-list for method output_type
-	7,  // [7:10] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+var file_commonpb_common_proto_depIdxs = []int32{
+	1, // 0: commonpb.KeyValueList.list:type_name -> commonpb.KeyValue
+	6, // 1: commonpb.KeyValueMap.map:type_name -> commonpb.KeyValueMap.MapEntry
+	2, // 2: commonpb.CommandResponse.list:type_name -> commonpb.KeyValueList
+	3, // 3: commonpb.CommandResponse.map:type_name -> commonpb.KeyValueMap
+	2, // 4: commonpb.KeyValueMap.MapEntry.value:type_name -> commonpb.KeyValueList
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
-func init() { file_proto_clusterpb_cluster_proto_init() }
-func file_proto_clusterpb_cluster_proto_init() {
-	if File_proto_clusterpb_cluster_proto != nil {
+func init() { file_commonpb_common_proto_init() }
+func file_commonpb_common_proto_init() {
+	if File_commonpb_common_proto != nil {
 		return
 	}
-	file_proto_clusterpb_cluster_proto_msgTypes[7].OneofWrappers = []any{
+	file_commonpb_common_proto_msgTypes[5].OneofWrappers = []any{
 		(*CommandResponse_Value)(nil),
 		(*CommandResponse_Success)(nil),
 		(*CommandResponse_Count)(nil),
@@ -619,17 +512,17 @@ func file_proto_clusterpb_cluster_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_clusterpb_cluster_proto_rawDesc), len(file_proto_clusterpb_cluster_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_commonpb_common_proto_rawDesc), len(file_commonpb_common_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   7,
 			NumExtensions: 0,
-			NumServices:   1,
+			NumServices:   0,
 		},
-		GoTypes:           file_proto_clusterpb_cluster_proto_goTypes,
-		DependencyIndexes: file_proto_clusterpb_cluster_proto_depIdxs,
-		MessageInfos:      file_proto_clusterpb_cluster_proto_msgTypes,
+		GoTypes:           file_commonpb_common_proto_goTypes,
+		DependencyIndexes: file_commonpb_common_proto_depIdxs,
+		MessageInfos:      file_commonpb_common_proto_msgTypes,
 	}.Build()
-	File_proto_clusterpb_cluster_proto = out.File
-	file_proto_clusterpb_cluster_proto_goTypes = nil
-	file_proto_clusterpb_cluster_proto_depIdxs = nil
+	File_commonpb_common_proto = out.File
+	file_commonpb_common_proto_goTypes = nil
+	file_commonpb_common_proto_depIdxs = nil
 }

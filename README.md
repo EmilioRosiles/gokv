@@ -136,7 +136,13 @@ The `gokv` nodes communicate with each other using a gRPC API. The following ser
 To regenerate the proto buffer files, run the following command:
 
 ```bash
-protoc --go_out=paths=source_relative:. --go-grpc_out=paths=source_relative:. proto/clusterpb/cluster.proto
+protoc --proto_path=proto \
+  --go_out=proto --go_opt=paths=source_relative \
+  --go-grpc_out=proto --go-grpc_opt=paths=source_relative \
+  commonpb/common.proto \
+  internalpb/internal.proto \
+  externalpb/external.proto
+
 ```
 
 ## Architecture
@@ -155,7 +161,7 @@ When a node receives a heartbeat message, it merges the received information wit
 
 ### Data Replication
 
-Write commands (e.g. `HSET`, `HDEL`) are replicated to other nodes in the cluster to ensure data durability. When a node receives a write command, it first applies the command to its own data store and then forwards the command to the other replicas. Read commands (e.g. `HGET`) can be sent to any node, they will be redirected to a random replica.
+Write commands (e.g. `HSET`, `HDEL`) are replicated to other nodes (n non virtual nodes after the leader in the ring) in the cluster to ensure data durability. When a node receives a write command, it first applies the command to its own data store and then forwards the command to the other replicas. Read commands (e.g. `HGET`) can be sent to any node, they will be redirected to the leader.
 
 ### Data Rebalancing
 
