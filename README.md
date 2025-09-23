@@ -53,7 +53,7 @@ go run cmd/gokv-cli/main.go <command> [arguments]
 **Example:**
 
 ```bash
-go run cmd/gokv-cli/main.go HSET myhash mykey myvalue 10s
+go run cmd/gokv-cli/main.go run HSET myhash mykey myvalue 10s
 ```
 
 **Available Commands:**
