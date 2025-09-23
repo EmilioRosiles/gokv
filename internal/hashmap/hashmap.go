@@ -245,7 +245,7 @@ func (c *HashMap) deleteExpired() {
 		for hash, he := range shard.hashes {
 			he.Mu.Lock()
 			for key, entry := range he.Items {
-				if entry.ExpiresAt > 0 && now > entry.ExpiresAt {
+				if entry.ExpiresAt != 0 && now > entry.ExpiresAt {
 					delete(he.Items, key)
 				}
 			}

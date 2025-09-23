@@ -25,8 +25,8 @@ func Default() *Config {
 		HeartbeatInterval: 5 * time.Second,
 		GossipPeerCount:   2,
 		VNodeCount:        3,
-		MessageTimeout:    5 * time.Second,
-		Replicas:          1,
+		MessageTimeout:    1 * time.Second,
+		Replicas:          2,
 	}
 }
 
