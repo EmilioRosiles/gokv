@@ -28,15 +28,14 @@ import (
 
 // ClusterManager manages the cluster state, including node information, peer list, data store, and hash ring.
 type ClusterManager struct {
-	Mu                   sync.RWMutex
-	NodeID               string                   // ID of the current node.
-	NodeAddr             string                   // Address of the current node.
-	PeerMap              map[string]*peer.Peer    // Map of nodes in the cluster.
-	HashRing             *hashring.HashRing       // Consistent hashing implementation.
-	ConnPool             *pool.GrpcConnectionPool // Connection pool for gRPC clients.
-	HashMap              *hashmap.HashMap         // In-memory data store.
-	CommandRegistry      *command.CommandRegistry // Registry for supported commands.
-	LastRebalanceVersion uint64
+	Mu              sync.RWMutex
+	NodeID          string                   // ID of the current node.
+	NodeAddr        string                   // Address of the current node.
+	PeerMap         map[string]*peer.Peer    // Map of nodes in the cluster.
+	HashRing        *hashring.HashRing       // Consistent hashing implementation.
+	ConnPool        *pool.GrpcConnectionPool // Connection pool for gRPC clients.
+	HashMap         *hashmap.HashMap         // In-memory data store.
+	CommandRegistry *command.CommandRegistry // Registry for supported commands.
 }
 
 // NewClusterManager creates and initializes a new ClusterManager.
@@ -146,11 +145,6 @@ func (cm *ClusterManager) GetPeerClient(nodeID string) (clusterpb.ClusterNodeCli
 	return clusterpb.NewClusterNodeClient(conn), true
 }
 
-// GetResponsibleNodes returns the IDs of the nodes responsible for a given key.
-func (cm *ClusterManager) GetResponsibleNodes(key string) []string {
-	return cm.HashRing.Get(key)
-}
-
 // AlivePeers returns the number of alive peers in the cluster.
 func (cm *ClusterManager) AlivePeers() int {
 	cm.Mu.RLock()
@@ -202,12 +196,11 @@ func (cm *ClusterManager) StartHeartbeat(cfg *config.Config) {
 
 	for range ticker.C {
 		gossipTargets := cm.GetRandomAlivePeers(cfg.GossipPeerCount) // Number of peers to gossip with.
+		old := cm.HashRing.Copy()
 		cm.Heartbeat(gossipTargets...)
-		next := cm.HashRing.GetVersion()
-		prev := cm.HashRing.GetLastVersion()
-		if next != prev {
-			cm.HashRing.CommitVersion()
-			go cm.Rebalance()
+		new := cm.HashRing
+		if new.GetVersion() != old.GetVersion() {
+			go cm.Rebalance(old, new)
 		}
 	}
 }
@@ -282,18 +275,72 @@ func (cm *ClusterManager) MergeState(nodes []*clusterpb.Node) {
 }
 
 // Rebalance redistributes keys across the cluster when a new node is added.
-func (cm *ClusterManager) Rebalance() {
+func (cm *ClusterManager) Rebalance(oldRing, newRing *hashring.HashRing) {
 	slog.Debug("cluster manager: rebalancing cluster")
 
 	// Commands to rebalance by node
 	commandsByNode := make(map[string][]*clusterpb.CommandRequest)
 	deleteList := make([]string, 0)
 
+	shouldRebalance := func(oldResponsibleNodeIDs, newResponsibleNodeIDs []string) bool {
+		oldLeader := oldResponsibleNodeIDs[0]
+		newLeader := newResponsibleNodeIDs[0]
+		// Old leader should always rebalance
+		if oldLeader == cm.NodeID {
+			slog.Info("cluster manager: this is the old leader")
+			return true
+		}
+
+		// Fall back is the new leader if used to be a replica
+		if slices.Contains(oldResponsibleNodeIDs, newLeader) {
+			slog.Info("cluster manager: this is the new leader")
+			return newLeader == cm.NodeID
+		}
+
+		// If new leader wasnt a replica before, then whichever is the first old alive replica
+		for _, replicaID := range oldResponsibleNodeIDs {
+			if replica, ok := cm.GetPeer(replicaID); ok {
+				if replica.Alive {
+					return replica.NodeID == cm.NodeID
+				}
+			}
+		}
+
+		// If none of that works I have no idea how this node has the data so just go ahead and replicate it :/
+		return true
+	}
+
+	replicationTargets := func(oldResponsibleNodeIDs, newResponsibleNodeIDs []string) []string {
+		oldSet := make(map[string]struct{}, len(oldResponsibleNodeIDs))
+		for _, id := range oldResponsibleNodeIDs {
+			oldSet[id] = struct{}{}
+		}
+
+		// Collect IDs that are in newIDs but not in oldSet
+		var diff []string
+		for _, id := range newResponsibleNodeIDs {
+			if _, exists := oldSet[id]; !exists {
+				diff = append(diff, id)
+			}
+		}
+
+		return diff
+	}
+
 	cm.HashMap.ScanHash(func(hash string, he *hashmap.HashEntry) {
-		responsibleNodeIDs := cm.GetResponsibleNodes(hash)
-		isResponsible := slices.Contains(responsibleNodeIDs, cm.NodeID)
-		// If this node is not responsible anymore for this key at all, or if it is and there are more replicas
-		if !isResponsible || (isResponsible && cm.HashRing.Replicas > 1) {
+		oldResponsibleNodeIDs := oldRing.Get(hash)
+		newResponsibleNodeIDs := newRing.Get(hash)
+		targetIDs := replicationTargets(oldResponsibleNodeIDs, newResponsibleNodeIDs)
+		if len(targetIDs) == 0 {
+			slog.Info("cluster manager: not need to rebalance, data where it needs to be")
+			slog.Info(fmt.Sprintf("cluster manager: old %v - new %v", oldResponsibleNodeIDs, newResponsibleNodeIDs))
+			return
+		}
+
+		shouldRebalance := shouldRebalance(oldResponsibleNodeIDs, newResponsibleNodeIDs)
+
+		// If should rebalance then create migration commands and group by target node
+		if shouldRebalance {
 			he.Mu.RLock()
 			for key, entry := range he.Items {
 				ttl := int64(0)
@@ -312,7 +359,7 @@ func (cm *ClusterManager) Rebalance() {
 					Args:    args,
 				}
 
-				for _, nodeID := range responsibleNodeIDs {
+				for _, nodeID := range targetIDs {
 					if nodeID != cm.NodeID {
 						commandsByNode[nodeID] = append(commandsByNode[nodeID], req)
 					}
@@ -320,13 +367,14 @@ func (cm *ClusterManager) Rebalance() {
 			}
 			he.Mu.RUnlock()
 		}
-		if !isResponsible {
+		// If this node is not on the new resposible list then add this hash to a delete list for after migration
+		if !slices.Contains(newResponsibleNodeIDs, cm.NodeID) {
 			deleteList = append(deleteList, hash)
 		}
 	})
 
 	for nodeID, commands := range commandsByNode {
-		slog.Debug(fmt.Sprintf("cluster manager: rebalancing %d keys to node %s", len(commands), nodeID))
+		slog.Info(fmt.Sprintf("cluster manager: rebalancing %d keys to node %s", len(commands), nodeID))
 		client, ok := cm.GetPeerClient(nodeID)
 		if !ok {
 			slog.Warn(fmt.Sprintf("cluster manager: rebalance command failed for peer %s, client not found", nodeID))
@@ -364,7 +412,7 @@ func (cm *ClusterManager) Rebalance() {
 
 // RunCommand executes a command, either locally (then replicate if applicable) or by forwarding it to a responsible node.
 func (cm *ClusterManager) RunCommand(ctx context.Context, req *clusterpb.CommandRequest, replicate bool) (any, error) {
-	responsibleNodeIDs := cm.GetResponsibleNodes(req.Key)
+	responsibleNodeIDs := cm.HashRing.Get(req.Key)
 	slog.Debug(fmt.Sprintf("cluster manager: run command responsible nodes: %v", responsibleNodeIDs))
 	isPrimary := responsibleNodeIDs[0] == cm.NodeID
 	isReplicaReq := !replicate && slices.Contains(responsibleNodeIDs[1:], cm.NodeID)
@@ -404,7 +452,7 @@ func (cm *ClusterManager) RunCommand(ctx context.Context, req *clusterpb.Command
 
 // Replicate command to replicas
 func (cm *ClusterManager) ReplicateCommand(req *clusterpb.CommandRequest) {
-	responsibleNodeIDs := cm.GetResponsibleNodes(req.Key)
+	responsibleNodeIDs := cm.HashRing.Get(req.Key)
 	for _, nodeID := range responsibleNodeIDs[1:] {
 		client, ok := cm.GetPeerClient(nodeID)
 		if !ok {
