@@ -8,7 +8,6 @@ Gokv is a distributed in-memory key-value store written in Go. It is designed to
 *   [Configuration](#configuration)
 *   [gRPC API](#grpc-api)
 *   [Architecture](#architecture)
-*   [Replication](#replication)
 
 ## Quickstart
 
