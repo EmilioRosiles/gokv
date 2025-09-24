@@ -27,14 +27,21 @@ func main() {
 	// Create a new cluster manager.
 	cm := cluster.NewClusterManager(env, cfg)
 
-	// Start the gRPC server in a new goroutine.
-	go grpc.StartGrpcServer(env, cm)
+	// Start the gRPC internal and external servers.
+	go grpc.StartInternalServer(env, cm)
+	go grpc.StartExternalServer(env, cm)
 
-	// If a seed node is provided, add it to the cluster and send a heartbeat.
-	if env.SeedNodeID != "" && env.SeedNodeAddr != "" {
-		cm.AddNode(env.SeedNodeID, env.SeedNodeAddr)
-		if seedNode, ok := cm.GetPeer(env.SeedNodeID); ok {
-			cm.Heartbeat(seedNode)
+	// If seed nodes are provided, add it to the cluster, send heartbeat, and trigger initial rebalance.
+	if len(env.ClusterSeeds) > 0 {
+		for nodeID, internalAddr := range env.ClusterSeeds {
+			cm.AddNode(nodeID, internalAddr, "")
+		}
+		cm.Heartbeat(cm.GetRandomAlivePeers(cm.AlivePeers())...)
+		if cm.LastRebalancedRing.GetVersion() != cm.HashRing.GetVersion() {
+			go cm.Rebalance(cm.LastRebalancedRing, cm.HashRing)
+			cm.Mu.Lock()
+			cm.LastRebalancedRing = cm.HashRing.Copy()
+			cm.Mu.Unlock()
 		}
 	}
 

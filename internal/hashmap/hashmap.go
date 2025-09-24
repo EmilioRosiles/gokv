@@ -3,13 +3,13 @@ package hashmap
 import (
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"runtime"
 	"sync"
 	"time"
 
 	"gokv/internal/command"
-	"gokv/proto/clusterpb"
-	"hash/fnv"
+	"gokv/proto/commonpb"
 )
 
 // fieldEntry represents an individual field in a hash, with its own TTL.
@@ -61,15 +61,15 @@ func (c *HashMap) HGet(hash string, args ...[]byte) (any, error) {
 	defer he.Mu.RUnlock()
 
 	if len(args) == 0 {
-		kvList := &clusterpb.KeyValueList{
-			List: make([]*clusterpb.KeyValue, 0),
+		kvList := &commonpb.KeyValueList{
+			List: make([]*commonpb.KeyValue, 0),
 		}
 
 		for key, entry := range he.Items {
 			if entry.ExpiresAt > 0 && time.Now().Unix() > entry.ExpiresAt {
 				continue
 			}
-			kvList.List = append(kvList.List, &clusterpb.KeyValue{Key: key, Value: entry.Data})
+			kvList.List = append(kvList.List, &commonpb.KeyValue{Key: key, Value: entry.Data})
 		}
 
 		return kvList, nil
@@ -84,8 +84,8 @@ func (c *HashMap) HGet(hash string, args ...[]byte) (any, error) {
 		return entry.Data, nil
 	}
 
-	kvList := &clusterpb.KeyValueList{
-		List: make([]*clusterpb.KeyValue, 0),
+	kvList := &commonpb.KeyValueList{
+		List: make([]*commonpb.KeyValue, 0),
 	}
 
 	for _, arg := range args {
@@ -94,7 +94,7 @@ func (c *HashMap) HGet(hash string, args ...[]byte) (any, error) {
 		if !ok || entry.ExpiresAt > 0 && time.Now().Unix() > entry.ExpiresAt {
 			continue
 		}
-		kvList.List = append(kvList.List, &clusterpb.KeyValue{Key: key, Value: entry.Data})
+		kvList.List = append(kvList.List, &commonpb.KeyValue{Key: key, Value: entry.Data})
 	}
 	return kvList, nil
 }

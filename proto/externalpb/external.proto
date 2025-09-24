@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+option go_package = "gokv/proto/externalpb;externalpb";
+
+import "commonpb/common.proto";
+
+package externalpb;
+
+service ExternalServer {
+  rpc Healthcheck(HealthcheckRequest) returns (HealthcheckResponse);
+  rpc RunCommand(commonpb.CommandRequest) returns (commonpb.CommandResponse);
+  rpc StreamCommand(stream commonpb.CommandRequest) returns (stream commonpb.CommandResponse);
+}
+
+message HealthcheckRequest {}
+
+message HealthcheckNode {
+  string node_id = 1;
+  string node_addr = 2;
+  bool alive = 3;
+}
+
+message HealthcheckResponse {
+  repeated HealthcheckNode peers = 1;
+}
+
+

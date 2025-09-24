@@ -4,23 +4,23 @@ import (
 	"errors"
 	"fmt"
 
-	"gokv/proto/clusterpb"
+	"gokv/proto/commonpb"
 )
 
 // Marshal converts a command handler's response into a protobuf CommandResponse.
-func Marshal(data any) (*clusterpb.CommandResponse, error) {
-	resp := &clusterpb.CommandResponse{}
+func Marshal(data any) (*commonpb.CommandResponse, error) {
+	resp := &commonpb.CommandResponse{}
 	switch v := data.(type) {
 	case []byte:
-		resp.Response = &clusterpb.CommandResponse_Value{Value: v}
+		resp.Response = &commonpb.CommandResponse_Value{Value: v}
 	case bool:
-		resp.Response = &clusterpb.CommandResponse_Success{Success: v}
+		resp.Response = &commonpb.CommandResponse_Success{Success: v}
 	case int64:
-		resp.Response = &clusterpb.CommandResponse_Count{Count: v}
-	case *clusterpb.KeyValueList:
-		resp.Response = &clusterpb.CommandResponse_List{List: v}
-	case *clusterpb.KeyValueMap:
-		resp.Response = &clusterpb.CommandResponse_Map{Map: v}
+		resp.Response = &commonpb.CommandResponse_Count{Count: v}
+	case *commonpb.KeyValueList:
+		resp.Response = &commonpb.CommandResponse_List{List: v}
+	case *commonpb.KeyValueMap:
+		resp.Response = &commonpb.CommandResponse_Map{Map: v}
 	default:
 		return nil, fmt.Errorf("unknown response type to marshal: %T", v)
 	}
@@ -28,20 +28,20 @@ func Marshal(data any) (*clusterpb.CommandResponse, error) {
 }
 
 // Unmarshal converts a protobuf CommandResponse into a generic interface{}.
-func Unmarshal(resp *clusterpb.CommandResponse) (any, error) {
+func Unmarshal(resp *commonpb.CommandResponse) (any, error) {
 	if resp.Error != "" {
 		return nil, errors.New(resp.Error)
 	}
 	switch v := resp.Response.(type) {
-	case *clusterpb.CommandResponse_Value:
+	case *commonpb.CommandResponse_Value:
 		return v.Value, nil
-	case *clusterpb.CommandResponse_Success:
+	case *commonpb.CommandResponse_Success:
 		return v.Success, nil
-	case *clusterpb.CommandResponse_Count:
+	case *commonpb.CommandResponse_Count:
 		return v.Count, nil
-	case *clusterpb.CommandResponse_List:
+	case *commonpb.CommandResponse_List:
 		return v.List, nil
-	case *clusterpb.CommandResponse_Map:
+	case *commonpb.CommandResponse_Map:
 		return v.Map, nil
 	default:
 		return nil, fmt.Errorf("unknown response type to unmarshal: %T", v)

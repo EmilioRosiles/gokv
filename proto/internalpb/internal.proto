@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+option go_package = "gokv/proto/internalpb;internalpb";
+
+import "commonpb/common.proto";
+
+package internalpb;
+
+service InternalServer {
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  rpc ForwardCommand(commonpb.CommandRequest) returns (commonpb.CommandResponse);
+  rpc Rebalance(stream RebalanceRequest) returns (RebalanceResponse);
+}
+
+message HeartbeatNode {
+  string node_id = 1;
+  string node_internal_addr = 2;
+  string node_external_addr = 3;
+  bool alive = 4;
+  int64 last_seen = 5;
+}
+
+message HeartbeatRequest {
+  repeated HeartbeatNode peers = 1;
+}
+
+message HeartbeatResponse {
+  repeated HeartbeatNode peers = 1;
+}
+
+message RebalanceRequest {
+  repeated commonpb.CommandRequest commands = 1;
+}
+
+message RebalanceResponse {
+  bool success = 1;
+}

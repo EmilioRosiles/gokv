@@ -1,29 +1,8 @@
 syntax = "proto3";
 
-option go_package = "./clusterpb";
+option go_package = "gokv/proto/commonpb;commonpb";
 
-package clusterpb;
-
-service ClusterNode {
-  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
-  rpc RunCommand(CommandRequest) returns (CommandResponse);
-  rpc StreamCommand(stream CommandRequest) returns (stream CommandResponse);
-}
-
-message Node {
-  string node_id = 1;
-  string node_addr = 2;
-  bool alive = 3;
-  int64 last_seen = 4;
-}
-
-message HeartbeatRequest {
-  repeated Node peers = 1;
-}
-
-message HeartbeatResponse {
-  repeated Node peers = 1;
-}
+package commonpb;
 
 message KeyValue {
   string key = 1;
