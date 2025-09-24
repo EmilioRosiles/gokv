@@ -1,6 +1,7 @@
 package environment
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"strings"
@@ -9,46 +10,67 @@ import (
 )
 
 type Environment struct {
-	NodeID       string
-	Host         string
-	Port         string
-	SeedNodeID   string
-	SeedNodeAddr string
-	CfgPath      string
-	TlsCertPath  string
-	TlsKeyPath   string
-	LogLevel     slog.Level
+	LogLevel                  slog.Level
+	CfgPath                   string
+	NodeID                    string
+	BindAddr                  string
+	AdvertiseAddr             string
+	ClusterSeeds              map[string]string
+	InternalTlsCAPath         string
+	InternalTlsServerCertPath string
+	InternalTlsServerKeyPath  string
+	InternalTlsClientCertPath string
+	InternalTlsClientKeyPath  string
+	ExternalTlsCAPath         string
+	ExternalTlsServerCertPath string
+	ExternalTlsServerKeyPath  string
+	ExternalGrpcBindAddr      string
+	ExternalGrpcAdvertiseAddr string
+	ExternalRestBindAddr      string
+	ExternalRestAdvertiseAddr string
 }
 
 // LoadEnvironment loads the environment variables from the .env file and the system.
 func LoadEnvironment() *Environment {
 	godotenv.Load()
-	nodeID := os.Getenv("NODE_ID")
-	if nodeID == "" {
-		nodeID = "node1"
-	}
-
-	host := os.Getenv("HOST")
-	if host == "" {
-		host = "localhost"
-	}
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "50051"
-	}
 
 	return &Environment{
-		NodeID:       nodeID,
-		Host:         host,
-		Port:         port,
-		SeedNodeID:   os.Getenv("SEED_NODE_ID"),
-		SeedNodeAddr: os.Getenv("SEED_NODE_ADDR"),
-		CfgPath:      os.Getenv("CONFIG_PATH"),
-		TlsCertPath:  os.Getenv("TLS_CERT_PATH"),
-		TlsKeyPath:   os.Getenv("TLS_KEY_PATH"),
-		LogLevel:     logLevel(os.Getenv("LOG_LEVEL")),
+		LogLevel:                  logLevel(os.Getenv("GOKV_LOG_LEVEL")),
+		CfgPath:                   os.Getenv("GOKV_CONFIG_PATH"),
+		NodeID:                    os.Getenv("GOKV_CLUSTER_NODE_ID"),
+		BindAddr:                  os.Getenv("GOKV_CLUSTER_BIND_ADDR"),
+		AdvertiseAddr:             os.Getenv("GOKV_CLUSTER_ADVERTISE_ADDR"),
+		ClusterSeeds:              getClusterSeeds(os.Getenv("GOKV_CLUSTER_SEEDS")),
+		InternalTlsCAPath:         os.Getenv("GOKV_INTERNAL_TLS_CA_PATH"),
+		InternalTlsServerCertPath: os.Getenv("GOKV_INTERNAL_TLS_SERVER_CERT_PATH"),
+		InternalTlsServerKeyPath:  os.Getenv("GOKV_INTERNAL_TLS_SERVER_KEY_PATH"),
+		InternalTlsClientCertPath: os.Getenv("GOKV_INTERNAL_TLS_CLIENT_CERT_PATH"),
+		InternalTlsClientKeyPath:  os.Getenv("GOKV_INTERNAL_TLS_CLIENT_KEY_PATH"),
+		ExternalTlsCAPath:         os.Getenv("GOKV_EXTERNAL_TLS_CA_PATH"),
+		ExternalTlsServerCertPath: os.Getenv("GOKV_EXTERNAL_TLS_SERVER_CERT_PATH"),
+		ExternalTlsServerKeyPath:  os.Getenv("GOKV_EXTERNAL_TLS_SERVER_KEY_PATH"),
+		ExternalGrpcBindAddr:      os.Getenv("GOKV_EXTERNAL_GRPC_BIND_ADDR"),
+		ExternalGrpcAdvertiseAddr: os.Getenv("GOKV_EXTERNAL_GRPC_ADVERTISE_ADDR"),
+		ExternalRestBindAddr:      os.Getenv("GOKV_EXTERNAL_REST_BIND_ADDR"),
+		ExternalRestAdvertiseAddr: os.Getenv("GOKV_EXTERNAL_REST_ADVERTISE_ADDR"),
 	}
+}
+
+func getClusterSeeds(str string) map[string]string {
+	seedMap := make(map[string]string, 0)
+	if str == "" {
+		return seedMap
+	}
+	clusterSeeds := strings.Split(str, ",")
+	for _, entry := range clusterSeeds {
+		parts := strings.SplitN(entry, "=", 2)
+		if len(parts) != 2 {
+			slog.Warn(fmt.Sprintf("environment: invalid seed entry: %q", entry))
+			continue
+		}
+		seedMap[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+	}
+	return seedMap
 }
 
 func logLevel(s string) slog.Level {

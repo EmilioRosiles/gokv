@@ -87,29 +87,26 @@ To run the cluster with TLS encryption, you need to generate certificates and co
 
 ## Configuration
 
-### Server Configuration
+### Environment Variables
 
 The following env variables can be used to configure a `gokv` node:
 
-| Variable         | Description                                     |  Default  |
-| ---------------- | ----------------------------------------------- |  -------  |
-| `LOG_LEVEL`      | Level of logs shown in the console.             | `info`    |
-| `NODE_ID`        | A unique identifier for the node.               |           |
-| `HOST`           | The hostname or IP address of the node.         | `0.0.0.0` |
-| `PORT`           | The port to listen on for gRPC connections.     | `8080`    |
-| `SEED_NODE_ID`   | The ID of a seed node to connect to.            |           |
-| `SEED_NODE_ADDR` | The address of a seed node to connect to.       |           |
-| `TLS_CERT_PATH`  | Path to the TLS certificate file.               |           |
-| `TLS_KEY_PATH`   | Path to the TLS key file.                       |           |
-
-### Client Configuration
-
-The following env variables can be used to configure a `gokv` client:
-
-| Variable         | Description                                     |  Default  |
-| ---------------- | ----------------------------------------------- |  -------  |
-| `GOKV_URI`       | The address of a node in the cluster.           |           |
-| `GOKV_CERT`      | Path to the TLS certificate file.               |           |
+| Variable                             | Description                                                                 | Default         |
+| ------------------------------------ | --------------------------------------------------------------------------- | --------------- |
+| `GOKV_LOG_LEVEL`                     | Level of logs shown in the console.                                         | `info`          |
+| `GOKV_CONFIG_PATH`                   | Path to the configuration file.                                             | `config.yml`    |
+| `GOKV_CLUSTER_NODE_ID`               | A unique identifier for the node.                                           |                 |
+| `GOKV_CLUSTER_BIND_ADDR`             | The address to bind the internal gRPC server to.                            | `localhost:50051` |
+| `GOKV_CLUSTER_ADVERTISE_ADDR`        | The address to advertise to other nodes in the cluster.                     |                 |
+| `GOKV_CLUSTER_SEED_NODES`            | A comma-separated list of seed nodes to join the cluster.                   |                 |
+| `GOKV_EXTERNAL_GRPC_BIND_ADDR`       | The address to bind the external gRPC server to.                            | `localhost:50052` |
+| `GOKV_EXTERNAL_GRPC_ADVERTISE_ADDR`  | The address to advertise to clients.                                        |                 |
+| `GOKV_EXTERNAL_REST_BIND_ADDR`       | The address to bind the REST API to.                                        | `localhost:8080`  |
+| `GOKV_EXTERNAL_REST_ADVERTISE_ADDR`  | The address to advertise to clients.                                        |                 |
+| `GOKV_TLS_CERT_PATH`                 | Path to the TLS certificate file.                                           |                 |
+| `GOKV_TLS_KEY_PATH`                  | Path to the TLS key file.                                                   |                 |
+| `GOKV_URI`                           | The URI of the gokv cluster to connect to.                                  | `localhost:50052` |
+| `GOKV_CERT`                          | Path to the client certificate.                                             |                 |
 
 ### Cluster Configuration
 

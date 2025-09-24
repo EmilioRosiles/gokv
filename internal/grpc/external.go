@@ -7,13 +7,13 @@ import (
 	"log/slog"
 	"net"
 	"os"
-	"time"
 
 	"gokv/internal/cluster"
 	"gokv/internal/command"
 	"gokv/internal/context/environment"
 	"gokv/internal/models/peer"
 	"gokv/internal/response"
+	"gokv/internal/tls"
 	"gokv/proto/commonpb"
 	"gokv/proto/externalpb"
 
@@ -32,38 +32,49 @@ type externalServer struct {
 // Start gRPC external server on the specified host and port.
 // It registers the clusterNodeServer implementation with the gRPC server.
 func StartExternalServer(env *environment.Environment, cm *cluster.ClusterManager) {
-	lis, err := net.Listen("tcp", env.Host+":"+env.Port)
+	lis, err := net.Listen("tcp", env.ExternalGrpcBindAddr)
+
 	if err != nil {
 		slog.Error(fmt.Sprintf("gRPC external: could not start listening: %v", err))
 		os.Exit(1)
 	}
 
 	creds := insecure.NewCredentials()
-	if env.TlsCertPath != "" || env.TlsKeyPath != "" {
+	if env.ExternalTlsServerCertPath != "" || env.ExternalTlsServerKeyPath != "" {
 		slog.Debug("gRPC external: attempting to start with TLS")
-		creds, err = credentials.NewServerTLSFromFile(env.TlsCertPath, env.TlsKeyPath)
+		externalTLS, err := tls.BuildServerTLSConfig(
+			env.ExternalTlsServerCertPath,
+			env.ExternalTlsServerKeyPath,
+			env.ExternalTlsCAPath,
+			false,
+		)
 		if err != nil {
 			slog.Error(fmt.Sprintf("gRPC external: failed to load TLS credentials: %v", err))
 			os.Exit(1)
 		}
+		creds = credentials.NewTLS(externalTLS)
 	}
 
 	grpcServer := grpc.NewServer(grpc.Creds(creds))
 	serverImplementation := &externalServer{cm: cm}
 	externalpb.RegisterExternalServerServer(grpcServer, serverImplementation)
-	slog.Info(fmt.Sprintf("gRPC external: starting on %s:%s", env.Host, env.Port))
+	slog.Info(fmt.Sprintf("gRPC external: starting on %s", env.ExternalGrpcBindAddr))
 	grpcServer.Serve(lis)
 }
 
 // Healthcheck request returns the cluster status.
-func (s *internalServer) Healthcheck(ctx context.Context, req *externalpb.HealthcheckRequest) (*externalpb.HealthcheckResponse, error) {
+func (s *externalServer) Healthcheck(ctx context.Context, req *externalpb.HealthcheckRequest) (*externalpb.HealthcheckResponse, error) {
 	slog.Debug("gRPC external: received healthcheck")
 	s.cm.Mu.RLock()
-	self := &commonpb.Node{NodeId: s.cm.NodeID, NodeAddr: s.cm.NodeAddr, Alive: true, LastSeen: time.Now().Unix()}
-	peerspb := make([]*commonpb.Node, 0, len(s.cm.PeerMap)+1)
+	self := &externalpb.HealthcheckNode{
+		NodeId:   s.cm.NodeID,
+		NodeAddr: s.cm.NodeExternalAddr,
+		Alive:    true,
+	}
+	peerspb := make([]*externalpb.HealthcheckNode, 0, len(s.cm.PeerMap)+1)
 	peerspb = append(peerspb, self)
 	for _, peerToAdd := range s.cm.PeerMap {
-		peerspb = append(peerspb, peer.ToProto(*peerToAdd))
+		peerspb = append(peerspb, peer.ToHealthcheckNodeProto(*peerToAdd))
 	}
 	s.cm.Mu.RUnlock()
 	return &externalpb.HealthcheckResponse{Peers: peerspb}, nil
@@ -122,7 +133,7 @@ func (s *externalServer) StreamCommand(stream externalpb.ExternalServer_StreamCo
 			return err
 		}
 
-		slog.Debug(fmt.Sprintf("gRPC external: received streamed command '%s' for key '%s'", req.Command, req.Key))
+		slog.Debug(fmt.Sprintf("gRPC external: received streamed command %s %s", req.Command, req.Key))
 		data, err := s.RunCommand(ctx, req)
 		if err != nil {
 			slog.Warn(fmt.Sprintf("gRPC external: error running streamed command: %v", err))

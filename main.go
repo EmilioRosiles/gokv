@@ -31,12 +31,17 @@ func main() {
 	go grpc.StartInternalServer(env, cm)
 	go grpc.StartExternalServer(env, cm)
 
-	// If a seed node is provided, add it to the cluster and send a heartbeat.
-	if env.SeedNodeID != "" && env.SeedNodeAddr != "" {
-		cm.AddNode(env.SeedNodeID, env.SeedNodeAddr)
-		if seedNode, ok := cm.GetPeer(env.SeedNodeID); ok {
-			cm.Heartbeat(seedNode)
+	// If seed nodes are provided, add it to the cluster, send heartbeat, and trigger initial rebalance.
+	if len(env.ClusterSeeds) > 0 {
+		old := cm.HashRing.Copy()
+		for nodeID, internalAddr := range env.ClusterSeeds {
+			cm.AddNode(nodeID, internalAddr, "")
 		}
+		allPeers := cm.GetRandomAlivePeers(cm.AlivePeers())
+		cm.Heartbeat(allPeers...)
+		new := cm.HashRing
+		// Initial rebalance currently doesn't do anything, but it will eventually when I add data persistance.
+		cm.Rebalance(old, new)
 	}
 
 	// Start the heartbeat process in a new goroutine.

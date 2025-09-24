@@ -21,74 +21,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type Node struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
-	NodeAddr      string                 `protobuf:"bytes,2,opt,name=node_addr,json=nodeAddr,proto3" json:"node_addr,omitempty"`
-	Alive         bool                   `protobuf:"varint,3,opt,name=alive,proto3" json:"alive,omitempty"`
-	LastSeen      int64                  `protobuf:"varint,4,opt,name=last_seen,json=lastSeen,proto3" json:"last_seen,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Node) Reset() {
-	*x = Node{}
-	mi := &file_commonpb_common_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Node) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Node) ProtoMessage() {}
-
-func (x *Node) ProtoReflect() protoreflect.Message {
-	mi := &file_commonpb_common_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Node.ProtoReflect.Descriptor instead.
-func (*Node) Descriptor() ([]byte, []int) {
-	return file_commonpb_common_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *Node) GetNodeId() string {
-	if x != nil {
-		return x.NodeId
-	}
-	return ""
-}
-
-func (x *Node) GetNodeAddr() string {
-	if x != nil {
-		return x.NodeAddr
-	}
-	return ""
-}
-
-func (x *Node) GetAlive() bool {
-	if x != nil {
-		return x.Alive
-	}
-	return false
-}
-
-func (x *Node) GetLastSeen() int64 {
-	if x != nil {
-		return x.LastSeen
-	}
-	return 0
-}
-
 type KeyValue struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
@@ -99,7 +31,7 @@ type KeyValue struct {
 
 func (x *KeyValue) Reset() {
 	*x = KeyValue{}
-	mi := &file_commonpb_common_proto_msgTypes[1]
+	mi := &file_commonpb_common_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -111,7 +43,7 @@ func (x *KeyValue) String() string {
 func (*KeyValue) ProtoMessage() {}
 
 func (x *KeyValue) ProtoReflect() protoreflect.Message {
-	mi := &file_commonpb_common_proto_msgTypes[1]
+	mi := &file_commonpb_common_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -124,7 +56,7 @@ func (x *KeyValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KeyValue.ProtoReflect.Descriptor instead.
 func (*KeyValue) Descriptor() ([]byte, []int) {
-	return file_commonpb_common_proto_rawDescGZIP(), []int{1}
+	return file_commonpb_common_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *KeyValue) GetKey() string {
@@ -150,7 +82,7 @@ type KeyValueList struct {
 
 func (x *KeyValueList) Reset() {
 	*x = KeyValueList{}
-	mi := &file_commonpb_common_proto_msgTypes[2]
+	mi := &file_commonpb_common_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -162,7 +94,7 @@ func (x *KeyValueList) String() string {
 func (*KeyValueList) ProtoMessage() {}
 
 func (x *KeyValueList) ProtoReflect() protoreflect.Message {
-	mi := &file_commonpb_common_proto_msgTypes[2]
+	mi := &file_commonpb_common_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -175,7 +107,7 @@ func (x *KeyValueList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KeyValueList.ProtoReflect.Descriptor instead.
 func (*KeyValueList) Descriptor() ([]byte, []int) {
-	return file_commonpb_common_proto_rawDescGZIP(), []int{2}
+	return file_commonpb_common_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *KeyValueList) GetList() []*KeyValue {
@@ -194,7 +126,7 @@ type KeyValueMap struct {
 
 func (x *KeyValueMap) Reset() {
 	*x = KeyValueMap{}
-	mi := &file_commonpb_common_proto_msgTypes[3]
+	mi := &file_commonpb_common_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -206,7 +138,7 @@ func (x *KeyValueMap) String() string {
 func (*KeyValueMap) ProtoMessage() {}
 
 func (x *KeyValueMap) ProtoReflect() protoreflect.Message {
-	mi := &file_commonpb_common_proto_msgTypes[3]
+	mi := &file_commonpb_common_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -219,7 +151,7 @@ func (x *KeyValueMap) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KeyValueMap.ProtoReflect.Descriptor instead.
 func (*KeyValueMap) Descriptor() ([]byte, []int) {
-	return file_commonpb_common_proto_rawDescGZIP(), []int{3}
+	return file_commonpb_common_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *KeyValueMap) GetMap() map[string]*KeyValueList {
@@ -240,7 +172,7 @@ type CommandRequest struct {
 
 func (x *CommandRequest) Reset() {
 	*x = CommandRequest{}
-	mi := &file_commonpb_common_proto_msgTypes[4]
+	mi := &file_commonpb_common_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -252,7 +184,7 @@ func (x *CommandRequest) String() string {
 func (*CommandRequest) ProtoMessage() {}
 
 func (x *CommandRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_commonpb_common_proto_msgTypes[4]
+	mi := &file_commonpb_common_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -265,7 +197,7 @@ func (x *CommandRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommandRequest.ProtoReflect.Descriptor instead.
 func (*CommandRequest) Descriptor() ([]byte, []int) {
-	return file_commonpb_common_proto_rawDescGZIP(), []int{4}
+	return file_commonpb_common_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *CommandRequest) GetCommand() string {
@@ -306,7 +238,7 @@ type CommandResponse struct {
 
 func (x *CommandResponse) Reset() {
 	*x = CommandResponse{}
-	mi := &file_commonpb_common_proto_msgTypes[5]
+	mi := &file_commonpb_common_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -318,7 +250,7 @@ func (x *CommandResponse) String() string {
 func (*CommandResponse) ProtoMessage() {}
 
 func (x *CommandResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_commonpb_common_proto_msgTypes[5]
+	mi := &file_commonpb_common_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -331,7 +263,7 @@ func (x *CommandResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommandResponse.ProtoReflect.Descriptor instead.
 func (*CommandResponse) Descriptor() ([]byte, []int) {
-	return file_commonpb_common_proto_rawDescGZIP(), []int{5}
+	return file_commonpb_common_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *CommandResponse) GetError() string {
@@ -431,12 +363,7 @@ var File_commonpb_common_proto protoreflect.FileDescriptor
 
 const file_commonpb_common_proto_rawDesc = "" +
 	"\n" +
-	"\x15commonpb/common.proto\x12\bcommonpb\"o\n" +
-	"\x04Node\x12\x17\n" +
-	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x1b\n" +
-	"\tnode_addr\x18\x02 \x01(\tR\bnodeAddr\x12\x14\n" +
-	"\x05alive\x18\x03 \x01(\bR\x05alive\x12\x1b\n" +
-	"\tlast_seen\x18\x04 \x01(\x03R\blastSeen\"2\n" +
+	"\x15commonpb/common.proto\x12\bcommonpb\"2\n" +
 	"\bKeyValue\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\fR\x05value\"6\n" +
@@ -473,22 +400,21 @@ func file_commonpb_common_proto_rawDescGZIP() []byte {
 	return file_commonpb_common_proto_rawDescData
 }
 
-var file_commonpb_common_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_commonpb_common_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_commonpb_common_proto_goTypes = []any{
-	(*Node)(nil),            // 0: commonpb.Node
-	(*KeyValue)(nil),        // 1: commonpb.KeyValue
-	(*KeyValueList)(nil),    // 2: commonpb.KeyValueList
-	(*KeyValueMap)(nil),     // 3: commonpb.KeyValueMap
-	(*CommandRequest)(nil),  // 4: commonpb.CommandRequest
-	(*CommandResponse)(nil), // 5: commonpb.CommandResponse
-	nil,                     // 6: commonpb.KeyValueMap.MapEntry
+	(*KeyValue)(nil),        // 0: commonpb.KeyValue
+	(*KeyValueList)(nil),    // 1: commonpb.KeyValueList
+	(*KeyValueMap)(nil),     // 2: commonpb.KeyValueMap
+	(*CommandRequest)(nil),  // 3: commonpb.CommandRequest
+	(*CommandResponse)(nil), // 4: commonpb.CommandResponse
+	nil,                     // 5: commonpb.KeyValueMap.MapEntry
 }
 var file_commonpb_common_proto_depIdxs = []int32{
-	1, // 0: commonpb.KeyValueList.list:type_name -> commonpb.KeyValue
-	6, // 1: commonpb.KeyValueMap.map:type_name -> commonpb.KeyValueMap.MapEntry
-	2, // 2: commonpb.CommandResponse.list:type_name -> commonpb.KeyValueList
-	3, // 3: commonpb.CommandResponse.map:type_name -> commonpb.KeyValueMap
-	2, // 4: commonpb.KeyValueMap.MapEntry.value:type_name -> commonpb.KeyValueList
+	0, // 0: commonpb.KeyValueList.list:type_name -> commonpb.KeyValue
+	5, // 1: commonpb.KeyValueMap.map:type_name -> commonpb.KeyValueMap.MapEntry
+	1, // 2: commonpb.CommandResponse.list:type_name -> commonpb.KeyValueList
+	2, // 3: commonpb.CommandResponse.map:type_name -> commonpb.KeyValueMap
+	1, // 4: commonpb.KeyValueMap.MapEntry.value:type_name -> commonpb.KeyValueList
 	5, // [5:5] is the sub-list for method output_type
 	5, // [5:5] is the sub-list for method input_type
 	5, // [5:5] is the sub-list for extension type_name
@@ -501,7 +427,7 @@ func file_commonpb_common_proto_init() {
 	if File_commonpb_common_proto != nil {
 		return
 	}
-	file_commonpb_common_proto_msgTypes[5].OneofWrappers = []any{
+	file_commonpb_common_proto_msgTypes[4].OneofWrappers = []any{
 		(*CommandResponse_Value)(nil),
 		(*CommandResponse_Success)(nil),
 		(*CommandResponse_Count)(nil),
@@ -514,7 +440,7 @@ func file_commonpb_common_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_commonpb_common_proto_rawDesc), len(file_commonpb_common_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

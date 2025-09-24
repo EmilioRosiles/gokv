@@ -12,12 +12,20 @@ service InternalServer {
   rpc Rebalance(stream RebalanceRequest) returns (RebalanceResponse);
 }
 
+message HeartbeatNode {
+  string node_id = 1;
+  string node_internal_addr = 2;
+  string node_external_addr = 3;
+  bool alive = 4;
+  int64 last_seen = 5;
+}
+
 message HeartbeatRequest {
-  repeated commonpb.Node peers = 1;
+  repeated HeartbeatNode peers = 1;
 }
 
 message HeartbeatResponse {
-  repeated commonpb.Node peers = 1;
+  repeated HeartbeatNode peers = 1;
 }
 
 message RebalanceRequest {

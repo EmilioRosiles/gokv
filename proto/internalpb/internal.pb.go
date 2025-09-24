@@ -22,16 +22,92 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type HeartbeatNode struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	NodeId           string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	NodeInternalAddr string                 `protobuf:"bytes,2,opt,name=node_internal_addr,json=nodeInternalAddr,proto3" json:"node_internal_addr,omitempty"`
+	NodeExternalAddr string                 `protobuf:"bytes,3,opt,name=node_external_addr,json=nodeExternalAddr,proto3" json:"node_external_addr,omitempty"`
+	Alive            bool                   `protobuf:"varint,4,opt,name=alive,proto3" json:"alive,omitempty"`
+	LastSeen         int64                  `protobuf:"varint,5,opt,name=last_seen,json=lastSeen,proto3" json:"last_seen,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *HeartbeatNode) Reset() {
+	*x = HeartbeatNode{}
+	mi := &file_internalpb_internal_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HeartbeatNode) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HeartbeatNode) ProtoMessage() {}
+
+func (x *HeartbeatNode) ProtoReflect() protoreflect.Message {
+	mi := &file_internalpb_internal_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HeartbeatNode.ProtoReflect.Descriptor instead.
+func (*HeartbeatNode) Descriptor() ([]byte, []int) {
+	return file_internalpb_internal_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *HeartbeatNode) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *HeartbeatNode) GetNodeInternalAddr() string {
+	if x != nil {
+		return x.NodeInternalAddr
+	}
+	return ""
+}
+
+func (x *HeartbeatNode) GetNodeExternalAddr() string {
+	if x != nil {
+		return x.NodeExternalAddr
+	}
+	return ""
+}
+
+func (x *HeartbeatNode) GetAlive() bool {
+	if x != nil {
+		return x.Alive
+	}
+	return false
+}
+
+func (x *HeartbeatNode) GetLastSeen() int64 {
+	if x != nil {
+		return x.LastSeen
+	}
+	return 0
+}
+
 type HeartbeatRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Peers         []*commonpb.Node       `protobuf:"bytes,1,rep,name=peers,proto3" json:"peers,omitempty"`
+	Peers         []*HeartbeatNode       `protobuf:"bytes,1,rep,name=peers,proto3" json:"peers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *HeartbeatRequest) Reset() {
 	*x = HeartbeatRequest{}
-	mi := &file_internalpb_internal_proto_msgTypes[0]
+	mi := &file_internalpb_internal_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -43,7 +119,7 @@ func (x *HeartbeatRequest) String() string {
 func (*HeartbeatRequest) ProtoMessage() {}
 
 func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internalpb_internal_proto_msgTypes[0]
+	mi := &file_internalpb_internal_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -56,10 +132,10 @@ func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeartbeatRequest.ProtoReflect.Descriptor instead.
 func (*HeartbeatRequest) Descriptor() ([]byte, []int) {
-	return file_internalpb_internal_proto_rawDescGZIP(), []int{0}
+	return file_internalpb_internal_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *HeartbeatRequest) GetPeers() []*commonpb.Node {
+func (x *HeartbeatRequest) GetPeers() []*HeartbeatNode {
 	if x != nil {
 		return x.Peers
 	}
@@ -68,14 +144,14 @@ func (x *HeartbeatRequest) GetPeers() []*commonpb.Node {
 
 type HeartbeatResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Peers         []*commonpb.Node       `protobuf:"bytes,1,rep,name=peers,proto3" json:"peers,omitempty"`
+	Peers         []*HeartbeatNode       `protobuf:"bytes,1,rep,name=peers,proto3" json:"peers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *HeartbeatResponse) Reset() {
 	*x = HeartbeatResponse{}
-	mi := &file_internalpb_internal_proto_msgTypes[1]
+	mi := &file_internalpb_internal_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -87,7 +163,7 @@ func (x *HeartbeatResponse) String() string {
 func (*HeartbeatResponse) ProtoMessage() {}
 
 func (x *HeartbeatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internalpb_internal_proto_msgTypes[1]
+	mi := &file_internalpb_internal_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -100,10 +176,10 @@ func (x *HeartbeatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeartbeatResponse.ProtoReflect.Descriptor instead.
 func (*HeartbeatResponse) Descriptor() ([]byte, []int) {
-	return file_internalpb_internal_proto_rawDescGZIP(), []int{1}
+	return file_internalpb_internal_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *HeartbeatResponse) GetPeers() []*commonpb.Node {
+func (x *HeartbeatResponse) GetPeers() []*HeartbeatNode {
 	if x != nil {
 		return x.Peers
 	}
@@ -119,7 +195,7 @@ type RebalanceRequest struct {
 
 func (x *RebalanceRequest) Reset() {
 	*x = RebalanceRequest{}
-	mi := &file_internalpb_internal_proto_msgTypes[2]
+	mi := &file_internalpb_internal_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -131,7 +207,7 @@ func (x *RebalanceRequest) String() string {
 func (*RebalanceRequest) ProtoMessage() {}
 
 func (x *RebalanceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internalpb_internal_proto_msgTypes[2]
+	mi := &file_internalpb_internal_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -144,7 +220,7 @@ func (x *RebalanceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RebalanceRequest.ProtoReflect.Descriptor instead.
 func (*RebalanceRequest) Descriptor() ([]byte, []int) {
-	return file_internalpb_internal_proto_rawDescGZIP(), []int{2}
+	return file_internalpb_internal_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *RebalanceRequest) GetCommands() []*commonpb.CommandRequest {
@@ -163,7 +239,7 @@ type RebalanceResponse struct {
 
 func (x *RebalanceResponse) Reset() {
 	*x = RebalanceResponse{}
-	mi := &file_internalpb_internal_proto_msgTypes[3]
+	mi := &file_internalpb_internal_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -175,7 +251,7 @@ func (x *RebalanceResponse) String() string {
 func (*RebalanceResponse) ProtoMessage() {}
 
 func (x *RebalanceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internalpb_internal_proto_msgTypes[3]
+	mi := &file_internalpb_internal_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -188,7 +264,7 @@ func (x *RebalanceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RebalanceResponse.ProtoReflect.Descriptor instead.
 func (*RebalanceResponse) Descriptor() ([]byte, []int) {
-	return file_internalpb_internal_proto_rawDescGZIP(), []int{3}
+	return file_internalpb_internal_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *RebalanceResponse) GetSuccess() bool {
@@ -203,11 +279,17 @@ var File_internalpb_internal_proto protoreflect.FileDescriptor
 const file_internalpb_internal_proto_rawDesc = "" +
 	"\n" +
 	"\x19internalpb/internal.proto\x12\n" +
-	"internalpb\x1a\x15commonpb/common.proto\"8\n" +
-	"\x10HeartbeatRequest\x12$\n" +
-	"\x05peers\x18\x01 \x03(\v2\x0e.commonpb.NodeR\x05peers\"9\n" +
-	"\x11HeartbeatResponse\x12$\n" +
-	"\x05peers\x18\x01 \x03(\v2\x0e.commonpb.NodeR\x05peers\"H\n" +
+	"internalpb\x1a\x15commonpb/common.proto\"\xb7\x01\n" +
+	"\rHeartbeatNode\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12,\n" +
+	"\x12node_internal_addr\x18\x02 \x01(\tR\x10nodeInternalAddr\x12,\n" +
+	"\x12node_external_addr\x18\x03 \x01(\tR\x10nodeExternalAddr\x12\x14\n" +
+	"\x05alive\x18\x04 \x01(\bR\x05alive\x12\x1b\n" +
+	"\tlast_seen\x18\x05 \x01(\x03R\blastSeen\"C\n" +
+	"\x10HeartbeatRequest\x12/\n" +
+	"\x05peers\x18\x01 \x03(\v2\x19.internalpb.HeartbeatNodeR\x05peers\"D\n" +
+	"\x11HeartbeatResponse\x12/\n" +
+	"\x05peers\x18\x01 \x03(\v2\x19.internalpb.HeartbeatNodeR\x05peers\"H\n" +
 	"\x10RebalanceRequest\x124\n" +
 	"\bcommands\x18\x01 \x03(\v2\x18.commonpb.CommandRequestR\bcommands\"-\n" +
 	"\x11RebalanceResponse\x12\x18\n" +
@@ -229,26 +311,26 @@ func file_internalpb_internal_proto_rawDescGZIP() []byte {
 	return file_internalpb_internal_proto_rawDescData
 }
 
-var file_internalpb_internal_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_internalpb_internal_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_internalpb_internal_proto_goTypes = []any{
-	(*HeartbeatRequest)(nil),         // 0: internalpb.HeartbeatRequest
-	(*HeartbeatResponse)(nil),        // 1: internalpb.HeartbeatResponse
-	(*RebalanceRequest)(nil),         // 2: internalpb.RebalanceRequest
-	(*RebalanceResponse)(nil),        // 3: internalpb.RebalanceResponse
-	(*commonpb.Node)(nil),            // 4: commonpb.Node
+	(*HeartbeatNode)(nil),            // 0: internalpb.HeartbeatNode
+	(*HeartbeatRequest)(nil),         // 1: internalpb.HeartbeatRequest
+	(*HeartbeatResponse)(nil),        // 2: internalpb.HeartbeatResponse
+	(*RebalanceRequest)(nil),         // 3: internalpb.RebalanceRequest
+	(*RebalanceResponse)(nil),        // 4: internalpb.RebalanceResponse
 	(*commonpb.CommandRequest)(nil),  // 5: commonpb.CommandRequest
 	(*commonpb.CommandResponse)(nil), // 6: commonpb.CommandResponse
 }
 var file_internalpb_internal_proto_depIdxs = []int32{
-	4, // 0: internalpb.HeartbeatRequest.peers:type_name -> commonpb.Node
-	4, // 1: internalpb.HeartbeatResponse.peers:type_name -> commonpb.Node
+	0, // 0: internalpb.HeartbeatRequest.peers:type_name -> internalpb.HeartbeatNode
+	0, // 1: internalpb.HeartbeatResponse.peers:type_name -> internalpb.HeartbeatNode
 	5, // 2: internalpb.RebalanceRequest.commands:type_name -> commonpb.CommandRequest
-	0, // 3: internalpb.InternalServer.Heartbeat:input_type -> internalpb.HeartbeatRequest
+	1, // 3: internalpb.InternalServer.Heartbeat:input_type -> internalpb.HeartbeatRequest
 	5, // 4: internalpb.InternalServer.ForwardCommand:input_type -> commonpb.CommandRequest
-	2, // 5: internalpb.InternalServer.Rebalance:input_type -> internalpb.RebalanceRequest
-	1, // 6: internalpb.InternalServer.Heartbeat:output_type -> internalpb.HeartbeatResponse
+	3, // 5: internalpb.InternalServer.Rebalance:input_type -> internalpb.RebalanceRequest
+	2, // 6: internalpb.InternalServer.Heartbeat:output_type -> internalpb.HeartbeatResponse
 	6, // 7: internalpb.InternalServer.ForwardCommand:output_type -> commonpb.CommandResponse
-	3, // 8: internalpb.InternalServer.Rebalance:output_type -> internalpb.RebalanceResponse
+	4, // 8: internalpb.InternalServer.Rebalance:output_type -> internalpb.RebalanceResponse
 	6, // [6:9] is the sub-list for method output_type
 	3, // [3:6] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
@@ -267,7 +349,7 @@ func file_internalpb_internal_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internalpb_internal_proto_rawDesc), len(file_internalpb_internal_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

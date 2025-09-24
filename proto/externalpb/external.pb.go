@@ -58,16 +58,76 @@ func (*HealthcheckRequest) Descriptor() ([]byte, []int) {
 	return file_externalpb_external_proto_rawDescGZIP(), []int{0}
 }
 
+type HealthcheckNode struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	NodeAddr      string                 `protobuf:"bytes,2,opt,name=node_addr,json=nodeAddr,proto3" json:"node_addr,omitempty"`
+	Alive         bool                   `protobuf:"varint,3,opt,name=alive,proto3" json:"alive,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HealthcheckNode) Reset() {
+	*x = HealthcheckNode{}
+	mi := &file_externalpb_external_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HealthcheckNode) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HealthcheckNode) ProtoMessage() {}
+
+func (x *HealthcheckNode) ProtoReflect() protoreflect.Message {
+	mi := &file_externalpb_external_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HealthcheckNode.ProtoReflect.Descriptor instead.
+func (*HealthcheckNode) Descriptor() ([]byte, []int) {
+	return file_externalpb_external_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *HealthcheckNode) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *HealthcheckNode) GetNodeAddr() string {
+	if x != nil {
+		return x.NodeAddr
+	}
+	return ""
+}
+
+func (x *HealthcheckNode) GetAlive() bool {
+	if x != nil {
+		return x.Alive
+	}
+	return false
+}
+
 type HealthcheckResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Peers         []*commonpb.Node       `protobuf:"bytes,1,rep,name=peers,proto3" json:"peers,omitempty"`
+	Peers         []*HealthcheckNode     `protobuf:"bytes,1,rep,name=peers,proto3" json:"peers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *HealthcheckResponse) Reset() {
 	*x = HealthcheckResponse{}
-	mi := &file_externalpb_external_proto_msgTypes[1]
+	mi := &file_externalpb_external_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -79,7 +139,7 @@ func (x *HealthcheckResponse) String() string {
 func (*HealthcheckResponse) ProtoMessage() {}
 
 func (x *HealthcheckResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_externalpb_external_proto_msgTypes[1]
+	mi := &file_externalpb_external_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -92,10 +152,10 @@ func (x *HealthcheckResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthcheckResponse.ProtoReflect.Descriptor instead.
 func (*HealthcheckResponse) Descriptor() ([]byte, []int) {
-	return file_externalpb_external_proto_rawDescGZIP(), []int{1}
+	return file_externalpb_external_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *HealthcheckResponse) GetPeers() []*commonpb.Node {
+func (x *HealthcheckResponse) GetPeers() []*HealthcheckNode {
 	if x != nil {
 		return x.Peers
 	}
@@ -108,9 +168,13 @@ const file_externalpb_external_proto_rawDesc = "" +
 	"\n" +
 	"\x19externalpb/external.proto\x12\n" +
 	"externalpb\x1a\x15commonpb/common.proto\"\x14\n" +
-	"\x12HealthcheckRequest\";\n" +
-	"\x13HealthcheckResponse\x12$\n" +
-	"\x05peers\x18\x01 \x03(\v2\x0e.commonpb.NodeR\x05peers2\xed\x01\n" +
+	"\x12HealthcheckRequest\"]\n" +
+	"\x0fHealthcheckNode\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x1b\n" +
+	"\tnode_addr\x18\x02 \x01(\tR\bnodeAddr\x12\x14\n" +
+	"\x05alive\x18\x03 \x01(\bR\x05alive\"H\n" +
+	"\x13HealthcheckResponse\x121\n" +
+	"\x05peers\x18\x01 \x03(\v2\x1b.externalpb.HealthcheckNodeR\x05peers2\xed\x01\n" +
 	"\x0eExternalServer\x12N\n" +
 	"\vHealthcheck\x12\x1e.externalpb.HealthcheckRequest\x1a\x1f.externalpb.HealthcheckResponse\x12A\n" +
 	"\n" +
@@ -129,20 +193,20 @@ func file_externalpb_external_proto_rawDescGZIP() []byte {
 	return file_externalpb_external_proto_rawDescData
 }
 
-var file_externalpb_external_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_externalpb_external_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_externalpb_external_proto_goTypes = []any{
 	(*HealthcheckRequest)(nil),       // 0: externalpb.HealthcheckRequest
-	(*HealthcheckResponse)(nil),      // 1: externalpb.HealthcheckResponse
-	(*commonpb.Node)(nil),            // 2: commonpb.Node
+	(*HealthcheckNode)(nil),          // 1: externalpb.HealthcheckNode
+	(*HealthcheckResponse)(nil),      // 2: externalpb.HealthcheckResponse
 	(*commonpb.CommandRequest)(nil),  // 3: commonpb.CommandRequest
 	(*commonpb.CommandResponse)(nil), // 4: commonpb.CommandResponse
 }
 var file_externalpb_external_proto_depIdxs = []int32{
-	2, // 0: externalpb.HealthcheckResponse.peers:type_name -> commonpb.Node
+	1, // 0: externalpb.HealthcheckResponse.peers:type_name -> externalpb.HealthcheckNode
 	0, // 1: externalpb.ExternalServer.Healthcheck:input_type -> externalpb.HealthcheckRequest
 	3, // 2: externalpb.ExternalServer.RunCommand:input_type -> commonpb.CommandRequest
 	3, // 3: externalpb.ExternalServer.StreamCommand:input_type -> commonpb.CommandRequest
-	1, // 4: externalpb.ExternalServer.Healthcheck:output_type -> externalpb.HealthcheckResponse
+	2, // 4: externalpb.ExternalServer.Healthcheck:output_type -> externalpb.HealthcheckResponse
 	4, // 5: externalpb.ExternalServer.RunCommand:output_type -> commonpb.CommandResponse
 	4, // 6: externalpb.ExternalServer.StreamCommand:output_type -> commonpb.CommandResponse
 	4, // [4:7] is the sub-list for method output_type
@@ -163,7 +227,7 @@ func file_externalpb_external_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_externalpb_external_proto_rawDesc), len(file_externalpb_external_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

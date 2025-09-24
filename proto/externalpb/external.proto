@@ -14,8 +14,14 @@ service ExternalServer {
 
 message HealthcheckRequest {}
 
+message HealthcheckNode {
+  string node_id = 1;
+  string node_addr = 2;
+  bool alive = 3;
+}
+
 message HealthcheckResponse {
-  repeated commonpb.Node peers = 1;
+  repeated HealthcheckNode peers = 1;
 }
 
 

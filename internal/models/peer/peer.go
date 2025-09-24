@@ -1,47 +1,67 @@
 package peer
 
 import (
-	"gokv/proto/commonpb"
+	"gokv/proto/externalpb"
+	"gokv/proto/internalpb"
 	"time"
 )
 
 type Peer struct {
-	NodeID   string
-	NodeAddr string
-	Alive    bool
-	LastSeen time.Time
+	NodeID           string
+	NodeInternalAddr string
+	NodeExternalAddr string
+	Alive            bool
+	LastSeen         time.Time
 }
 
-func ToProto(entry Peer) *commonpb.Node {
-	return &commonpb.Node{
-		NodeId:   entry.NodeID,
-		NodeAddr: entry.NodeAddr,
-		Alive:    entry.Alive,
-		LastSeen: entry.LastSeen.Unix(),
+func ToHeartbeatNodeProto(entry Peer) *internalpb.HeartbeatNode {
+	return &internalpb.HeartbeatNode{
+		NodeId:           entry.NodeID,
+		NodeInternalAddr: entry.NodeInternalAddr,
+		NodeExternalAddr: entry.NodeExternalAddr,
+		Alive:            entry.Alive,
+		LastSeen:         entry.LastSeen.Unix(),
 	}
 }
 
-func FromProto(p *commonpb.Node) Peer {
+func FromHeartbeatNodeProto(p *internalpb.HeartbeatNode) Peer {
 	return Peer{
-		NodeID:   p.NodeId,
-		NodeAddr: p.NodeAddr,
-		Alive:    p.Alive,
-		LastSeen: time.Unix(p.LastSeen, 0),
+		NodeID:           p.NodeId,
+		NodeInternalAddr: p.NodeInternalAddr,
+		NodeExternalAddr: p.NodeExternalAddr,
+		Alive:            p.Alive,
+		LastSeen:         time.Unix(p.LastSeen, 0),
 	}
 }
 
-func ToProtoList(entries []Peer) []*commonpb.Node {
-	protoEntries := make([]*commonpb.Node, len(entries))
+func ToHeartbeatNodeProtoList(entries []Peer) []*internalpb.HeartbeatNode {
+	protoEntries := make([]*internalpb.HeartbeatNode, len(entries))
 	for i, e := range entries {
-		protoEntries[i] = ToProto(e)
+		protoEntries[i] = ToHeartbeatNodeProto(e)
 	}
 	return protoEntries
 }
 
-func FromProtoList(pl []*commonpb.Node) []Peer {
+func FromHeartbeatNodeProtoList(pl []*internalpb.HeartbeatNode) []Peer {
 	entries := make([]Peer, len(pl))
 	for i, p := range pl {
-		entries[i] = FromProto(p)
+		entries[i] = FromHeartbeatNodeProto(p)
 	}
 	return entries
+}
+
+func ToHealthcheckNodeProto(entry Peer) *externalpb.HealthcheckNode {
+	return &externalpb.HealthcheckNode{
+		NodeId:   entry.NodeID,
+		NodeAddr: entry.NodeExternalAddr,
+		Alive:    entry.Alive,
+	}
+}
+
+func ToHealthcheckNodeProtoList(entries []Peer) []*externalpb.HealthcheckNode {
+	protoEntries := make([]*externalpb.HealthcheckNode, len(entries))
+	for i, e := range entries {
+		protoEntries[i] = ToHealthcheckNodeProto(e)
+	}
+	return protoEntries
 }

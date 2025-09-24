@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"gokv/internal/tls"
 	"gokv/proto/commonpb"
 	"gokv/proto/externalpb"
 
@@ -14,13 +15,11 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 var (
-	uri      string
-	cert     string
-	clientID string
+	uri  string
+	cert string
 )
 
 var rootCmd = &cobra.Command{
@@ -127,35 +126,28 @@ func init() {
 		log.Printf("Error loading .env file: %v", err)
 	}
 
-	uri = os.Getenv("GOKV_URI")
+	uri = os.Getenv("GOKV_CLIENT_URI")
 	if uri == "" {
 		uri = "localhost:50051"
 	}
 
-	cert = os.Getenv("GOKV_CERT")
-
-	clientID = os.Getenv("GOKV_CLIENT_ID")
-	if clientID == "" {
-		clientID = "client1"
-	}
+	cert = os.Getenv("GOKV_CLIENT_CERT")
 
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(runCmd)
 }
 
 func createConnection() (*grpc.ClientConn, error) {
-	var opts []grpc.DialOption
-	if cert != "" {
-		creds, err := credentials.NewClientTLSFromFile(cert, "")
-		if err != nil {
-			return nil, fmt.Errorf("failed to load TLS credentials: %w", err)
-		}
-		opts = append(opts, grpc.WithTransportCredentials(creds))
-	} else {
-		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	tlsCfg, err := tls.BuildClientTLSConfig("certs/ca.cert.pem", "", "", "localhost")
+	if err != nil {
+		return nil, err
 	}
+	creds := credentials.NewTLS(tlsCfg)
 
-	return grpc.NewClient(uri, opts...)
+	return grpc.NewClient(uri,
+		grpc.WithTransportCredentials(creds),
+		grpc.WithConnectParams(grpc.ConnectParams{MinConnectTimeout: 5 * time.Second}),
+	)
 }
 
 func main() {

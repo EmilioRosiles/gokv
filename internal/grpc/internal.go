@@ -14,6 +14,7 @@ import (
 	"gokv/internal/context/environment"
 	"gokv/internal/models/peer"
 	"gokv/internal/response"
+	"gokv/internal/tls"
 	"gokv/proto/commonpb"
 	"gokv/proto/internalpb"
 
@@ -32,26 +33,33 @@ type internalServer struct {
 // StartGrpcServer starts the gRPC server on the specified host and port.
 // It registers the clusterNodeServer implementation with the gRPC server.
 func StartInternalServer(env *environment.Environment, cm *cluster.ClusterManager) {
-	lis, err := net.Listen("tcp", env.Host+":"+env.Port)
+	lis, err := net.Listen("tcp", env.BindAddr)
+
 	if err != nil {
 		slog.Error(fmt.Sprintf("gRPC internal: could not start listening: %v", err))
 		os.Exit(1)
 	}
 
 	creds := insecure.NewCredentials()
-	if env.TlsCertPath != "" || env.TlsKeyPath != "" {
+	if env.InternalTlsServerCertPath != "" || env.InternalTlsServerKeyPath != "" {
 		slog.Debug("gRPC internal: attempting to start with TLS")
-		creds, err = credentials.NewServerTLSFromFile(env.TlsCertPath, env.TlsKeyPath)
+		internalTLS, err := tls.BuildServerTLSConfig(
+			env.InternalTlsServerCertPath,
+			env.InternalTlsServerKeyPath,
+			env.InternalTlsCAPath,
+			true,
+		)
 		if err != nil {
 			slog.Error(fmt.Sprintf("gRPC internal: failed to load TLS credentials: %v", err))
 			os.Exit(1)
 		}
+		creds = credentials.NewTLS(internalTLS)
 	}
 
 	grpcServer := grpc.NewServer(grpc.Creds(creds))
 	serverImplementation := &internalServer{cm: cm}
 	internalpb.RegisterInternalServerServer(grpcServer, serverImplementation)
-	slog.Info(fmt.Sprintf("gRPC internal: starting on %s:%s", env.Host, env.Port))
+	slog.Info(fmt.Sprintf("gRPC internal: starting on %s", env.BindAddr))
 	grpcServer.Serve(lis)
 }
 
@@ -67,11 +75,11 @@ func (s *internalServer) Heartbeat(ctx context.Context, req *internalpb.Heartbea
 	}
 
 	s.cm.Mu.RLock()
-	self := &commonpb.Node{NodeId: s.cm.NodeID, NodeAddr: s.cm.NodeAddr, Alive: true, LastSeen: time.Now().Unix()}
-	peerspb := make([]*commonpb.Node, 0, len(s.cm.PeerMap)+1)
+	self := &internalpb.HeartbeatNode{NodeId: s.cm.NodeID, NodeInternalAddr: s.cm.NodeInternalAddr, NodeExternalAddr: s.cm.NodeExternalAddr, Alive: true, LastSeen: time.Now().Unix()}
+	peerspb := make([]*internalpb.HeartbeatNode, 0, len(s.cm.PeerMap)+1)
 	peerspb = append(peerspb, self)
 	for _, peerToAdd := range s.cm.PeerMap {
-		peerspb = append(peerspb, peer.ToProto(*peerToAdd))
+		peerspb = append(peerspb, peer.ToHeartbeatNodeProto(*peerToAdd))
 	}
 	s.cm.Mu.RUnlock()
 	return &internalpb.HeartbeatResponse{Peers: peerspb}, nil

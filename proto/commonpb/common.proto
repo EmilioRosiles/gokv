@@ -4,13 +4,6 @@ option go_package = "gokv/proto/commonpb;commonpb";
 
 package commonpb;
 
-message Node {
-  string node_id = 1;
-  string node_addr = 2;
-  bool alive = 3;
-  int64 last_seen = 4;
-}
-
 message KeyValue {
   string key = 1;
   bytes value = 2;
