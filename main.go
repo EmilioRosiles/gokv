@@ -33,15 +33,16 @@ func main() {
 
 	// If seed nodes are provided, add it to the cluster, send heartbeat, and trigger initial rebalance.
 	if len(env.ClusterSeeds) > 0 {
-		old := cm.HashRing.Copy()
 		for nodeID, internalAddr := range env.ClusterSeeds {
 			cm.AddNode(nodeID, internalAddr, "")
 		}
-		allPeers := cm.GetRandomAlivePeers(cm.AlivePeers())
-		cm.Heartbeat(allPeers...)
-		new := cm.HashRing
-		// Initial rebalance currently doesn't do anything, but it will eventually when I add data persistance.
-		cm.Rebalance(old, new)
+		cm.Heartbeat(cm.GetRandomAlivePeers(cm.AlivePeers())...)
+		if cm.LastRebalancedRing.GetVersion() != cm.HashRing.GetVersion() {
+			go cm.Rebalance(cm.LastRebalancedRing, cm.HashRing)
+			cm.Mu.Lock()
+			cm.LastRebalancedRing = cm.HashRing.Copy()
+			cm.Mu.Unlock()
+		}
 	}
 
 	// Start the heartbeat process in a new goroutine.

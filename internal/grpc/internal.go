@@ -67,11 +67,12 @@ func StartInternalServer(env *environment.Environment, cm *cluster.ClusterManage
 // It merges the state of the incoming node and its peers with the current node's state.
 func (s *internalServer) Heartbeat(ctx context.Context, req *internalpb.HeartbeatRequest) (*internalpb.HeartbeatResponse, error) {
 	slog.Debug("gRPC internal: received heartbeat")
-	old := s.cm.HashRing.Copy()
 	s.cm.MergeState(req.Peers)
-	new := s.cm.HashRing
-	if new.GetVersion() != old.GetVersion() {
-		go s.cm.Rebalance(old, new)
+	if s.cm.LastRebalancedRing.GetVersion() != s.cm.HashRing.GetVersion() {
+		go s.cm.Rebalance(s.cm.LastRebalancedRing, s.cm.HashRing)
+		s.cm.Mu.Lock()
+		s.cm.LastRebalancedRing = s.cm.HashRing.Copy()
+		s.cm.Mu.Unlock()
 	}
 
 	s.cm.Mu.RLock()

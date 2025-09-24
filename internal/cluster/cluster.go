@@ -29,15 +29,16 @@ import (
 
 // ClusterManager manages the cluster state, including node information, peer list, data store, and hash ring.
 type ClusterManager struct {
-	Mu               sync.RWMutex
-	NodeID           string                   // ID of the current node.
-	NodeInternalAddr string                   // Address of the current node.
-	NodeExternalAddr string                   //
-	PeerMap          map[string]*peer.Peer    // Map of nodes in the cluster.
-	HashRing         *hashring.HashRing       // Consistent hashing implementation.
-	ConnPool         *pool.GrpcConnectionPool // Connection pool for gRPC clients.
-	HashMap          *hashmap.HashMap         // In-memory data store.
-	CommandRegistry  *command.CommandRegistry // Registry for supported commands.
+	Mu                 sync.RWMutex
+	NodeID             string                   // ID of the current node.
+	NodeInternalAddr   string                   // Address of the current node.
+	NodeExternalAddr   string                   //
+	PeerMap            map[string]*peer.Peer    // Map of nodes in the cluster.
+	HashRing           *hashring.HashRing       // Consistent hashing implementation.
+	ConnPool           *pool.GrpcConnectionPool // Connection pool for gRPC clients.
+	HashMap            *hashmap.HashMap         // In-memory data store.
+	CommandRegistry    *command.CommandRegistry // Registry for supported commands.
+	LastRebalancedRing *hashring.HashRing       // Ring used for the last rebalance (avoids multiple reblance calls)
 }
 
 // NewClusterManager creates and initializes a new ClusterManager.
@@ -49,7 +50,7 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 	connPool := pool.NewGrpcConnectionPool(func(address string) (*grpc.ClientConn, error) {
 		creds := insecure.NewCredentials()
 		if env.InternalTlsClientCertPath != "" || env.InternalTlsClientKeyPath != "" {
-			slog.Debug("cluster manager: attempting to start with TLS")
+			slog.Debug("cluster manager: attempting to start client with TLS")
 			tlsCfg, err := tls.BuildClientTLSConfig(
 				env.InternalTlsCAPath,
 				env.InternalTlsClientCertPath,
@@ -81,6 +82,7 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 	}
 
 	cm.HashRing.Add(cm.NodeID)
+	cm.LastRebalancedRing = cm.HashRing.Copy()
 	slog.Debug(fmt.Sprintf("cluster manager: created cluster manager for node: %s", cm.NodeID))
 	return cm
 }
@@ -208,11 +210,12 @@ func (cm *ClusterManager) StartHeartbeat(cfg *config.Config) {
 
 	for range ticker.C {
 		gossipTargets := cm.GetRandomAlivePeers(cfg.GossipPeerCount) // Number of peers to gossip with.
-		old := cm.HashRing.Copy()
 		cm.Heartbeat(gossipTargets...)
-		new := cm.HashRing
-		if new.GetVersion() != old.GetVersion() {
-			go cm.Rebalance(old, new)
+		if cm.LastRebalancedRing.GetVersion() != cm.HashRing.GetVersion() {
+			go cm.Rebalance(cm.LastRebalancedRing, cm.HashRing)
+			cm.Mu.Lock()
+			cm.LastRebalancedRing = cm.HashRing.Copy()
+			cm.Mu.Unlock()
 		}
 	}
 }
@@ -273,6 +276,12 @@ func (cm *ClusterManager) MergeState(nodes []*internalpb.HeartbeatNode) {
 
 		if !exists {
 			cm.AddNode(remoteNode.NodeId, remoteNode.NodeInternalAddr, remoteNode.NodeExternalAddr)
+			if peer, ok := cm.GetPeer(remoteNode.NodeId); ok {
+				cm.Mu.Lock()
+				peer.Alive = remoteNode.Alive
+				peer.LastSeen = time.Unix(remoteNode.LastSeen, 0)
+				cm.Mu.Unlock()
+			}
 			continue
 		}
 
@@ -426,10 +435,10 @@ func (cm *ClusterManager) Rebalance(oldRing, newRing *hashring.HashRing) {
 	})
 
 	for nodeID, commands := range commandsByNode {
-		// if peer, ok := cm.GetPeer(nodeID); ok {
-		// cm.Heartbeat(peer)
-		cm.streamMigrationCommands(nodeID, commands)
-		// }
+		if peer, ok := cm.GetPeer(nodeID); ok {
+			cm.Heartbeat(peer)
+			cm.streamMigrationCommands(nodeID, commands)
+		}
 	}
 
 	for _, hash := range deleteList {
