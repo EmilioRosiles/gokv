@@ -47,16 +47,17 @@ A command-line interface (CLI) tool is available for interacting with the cluste
 **Usage:**
 
 ```bash
-go run cmd/gokv-cli/main.go <command> [arguments]
+./gokv-cli <commnad> <gokv-command> [arguments]
 ```
 
 **Example:**
 
 ```bash
-go run cmd/gokv-cli/main.go HSET myhash mykey myvalue 10s
+./gokv-cli status
+./gokv-cli run HSET myhash mykey myvalue 10s
 ```
 
-**Available Commands:**
+**GOKV Available Commands:**
 
 *   `HGET <key> <field>`: Get the a hash or field/s in a hash.
 *   `HSET <key> <field> <value> [ttl]`: Set the value of a field in a hash. `ttl` is an optional duration (e.g., `10s`, `1m`).
@@ -74,14 +75,20 @@ To run the cluster with TLS encryption, you need to generate certificates and co
     ./certs.sh
     ```
 
-    This will create a `certs` directory containing the server certificate and key.
+    This will create a `certs` directory containing the CA, internal server, internal client, and external server certificates and keys.
 
 2.  **Configure TLS:**
 
     You can configure the nodes to use TLS by setting the following environment variables:
 
-    *   `TLS_CERT_PATH`: Path to the server certificate file (e.g., `certs/server.crt`).
-    *   `TLS_KEY_PATH`: Path to the server key file (e.g., `certs/server.key`).
+    *   `GOKV_INTERNAL_TLS_CA_PATH`: Path to the Certificate Authority certificate file for internal gRPC.
+    *   `GOKV_INTERNAL_TLS_SERVER_CERT_PATH`: Path to the TLS certificate for internal communication.
+    *   `GOKV_INTERNAL_TLS_SERVER_KEY_PATH`: Path to the TLS key for internal communication.
+    *   `GOKV_INTERNAL_TLS_CLIENT_CERT_PATH`: Path to the TLS certificate for internal communication.
+    *   `GOKV_INTERNAL_TLS_CLIENT_KEY_PATH`: Path to the TLS key for internal communication.
+    *   `GOKV_EXTERNAL_TLS_CA_PATH`: Path to the Certificate Authority certificate file for external gRPC.
+    *   `GOKV_EXTERNAL_TLS_SERVER_CERT_PATH`: Path to the TLS certificate for external communication.
+    *   `GOKV_EXTERNAL_TLS_SERVER_KEY_PATH`: Path to the TLS key for external communication.
 
     You can set these variables in a `.env` file or directly in the `docker-compose.yml` file.
 
@@ -91,22 +98,55 @@ To run the cluster with TLS encryption, you need to generate certificates and co
 
 The following env variables can be used to configure a `gokv` node:
 
-| Variable                             | Description                                                                 | Default         |
-| ------------------------------------ | --------------------------------------------------------------------------- | --------------- |
-| `GOKV_LOG_LEVEL`                     | Level of logs shown in the console.                                         | `info`          |
-| `GOKV_CONFIG_PATH`                   | Path to the configuration file.                                             | `config.yml`    |
-| `GOKV_CLUSTER_NODE_ID`               | A unique identifier for the node.                                           |                 |
-| `GOKV_CLUSTER_BIND_ADDR`             | The address to bind the internal gRPC server to.                            | `localhost:50051` |
-| `GOKV_CLUSTER_ADVERTISE_ADDR`        | The address to advertise to other nodes in the cluster.                     |                 |
-| `GOKV_CLUSTER_SEED_NODES`            | A comma-separated list of seed nodes to join the cluster.                   |                 |
-| `GOKV_EXTERNAL_GRPC_BIND_ADDR`       | The address to bind the external gRPC server to.                            | `localhost:50052` |
-| `GOKV_EXTERNAL_GRPC_ADVERTISE_ADDR`  | The address to advertise to clients.                                        |                 |
-| `GOKV_EXTERNAL_REST_BIND_ADDR`       | The address to bind the REST API to.                                        | `localhost:8080`  |
-| `GOKV_EXTERNAL_REST_ADVERTISE_ADDR`  | The address to advertise to clients.                                        |                 |
-| `GOKV_TLS_CERT_PATH`                 | Path to the TLS certificate file.                                           |                 |
-| `GOKV_TLS_KEY_PATH`                  | Path to the TLS key file.                                                   |                 |
-| `GOKV_URI`                           | The URI of the gokv cluster to connect to.                                  | `localhost:50052` |
-| `GOKV_CERT`                          | Path to the client certificate.                                             |                 |
+#### General Env Variables
+
+| Variable           | Description                         | Default      |
+| ------------------ | ----------------------------------- | ------------ |
+| `GOKV_LOG_LEVEL`   | Level of logs shown in the console. | `info`       |
+| `GOKV_CONFIG_PATH` | Path to the configuration file.     | `config.yml` |
+
+#### Cluster Env Variables
+
+| Variable                      | Description                                               | Default               |
+| ----------------------------- | --------------------------------------------------------- | --------------------- |
+| `GOKV_CLUSTER_NODE_ID`        | A unique identifier for the node.                         |                       |
+| `GOKV_CLUSTER_BIND_ADDR`      | The address to bind the internal gRPC server to.          | `0.0.0.0:50000`       |
+| `GOKV_CLUSTER_ADVERTISE_ADDR` | The address to advertise to other nodes in the cluster.   | `localhost:50000`     |
+| `GOKV_CLUSTER_SEEDS`          | A comma-separated list of seed nodes to join the cluster. |                       |
+
+#### Internal TLS Env Variables
+
+| Variable                           | Description                                                              | Default |
+| ---------------------------------- | ------------------------------------------------------------------------ | ------- |
+| `GOKV_INTERNAL_TLS_CA_PATH`        | Certificate Authority certificate path for internal gRPC.                |         |
+| `GOKV_INTERNAL_TLS_SERVER_CERT_PATH` | TLS certificate for internal communication.                            |         |
+| `GOKV_INTERNAL_TLS_SERVER_KEY_PATH`  | TLS key for internal communication.                                    |         |
+| `GOKV_INTERNAL_TLS_CLIENT_CERT_PATH` | TLS certificate for internal communication.                            |         |
+| `GOKV_INTERNAL_TLS_CLIENT_KEY_PATH`  | TLS key for internal communication.                                    |         |
+
+#### External TLS Env Variables
+
+| Variable                             | Description                                               | Default |
+| ------------------------------------ | --------------------------------------------------------- | ------- |
+| `GOKV_EXTERNAL_TLS_CA_PATH`          | Certificate Authority certificate path for external gRPC. |         |
+| `GOKV_EXTERNAL_TLS_SERVER_CERT_PATH` | TLS certificate for internal communication.               |         |
+| `GOKV_EXTERNAL_TLS_SERVER_KEY_PATH`  | TLS key for internal communication.                       |         |
+
+#### External API Env Variables
+
+| Variable                          | Description                                       | Default           |
+| --------------------------------- | ------------------------------------------------- | ----------------- |
+| `GOKV_EXTERNAL_GRPC_BIND_ADDR`    | The address to bind the external gRPC server to.  | `0.0.0.0:50051`   |
+| `GOKV_EXTERNAL_GRPC_ADVERTISE_ADDR` | The address to advertise to clients.            | `localhost:50051` |
+| `GOKV_EXTERNAL_REST_BIND_ADDR`    | The address to bind the REST API to.              | `0.0.0.0:8080`    |
+| `GOKV_EXTERNAL_REST_ADVERTISE_ADDR` | The address to advertise to clients.            | `localhost:8080`  |
+
+#### Client Env Variables
+
+| Variable          | Description                                    | Default             |
+| ----------------- | ---------------------------------------------- | ------------------- |
+| `GOKV_CLIENT_URI` | The URI of the gokv cluster to connect to.     | `localhost:50051`   |
+| `GOKV_CLIENT_CA`  | The CA for TLS.                                |                     |
 
 ### Cluster Configuration
 
@@ -123,11 +163,24 @@ The following config variables can be used to configure a `gokv` cluster:
 
 ## gRPC API
 
-The `gokv` nodes communicate with each other using a gRPC API. The following services are available:
+The `gokv` nodes communicate with each other using an internal gRPC API, while clients can interact with the cluster using a separate external gRPC API.
 
-*   `ClusterNode`:
+### Internal API
+
+The internal gRPC API is used for communication between nodes in the cluster. The following services are available:
+
+*   `InternalServer`:
     *   `Heartbeat`: Used by the nodes to exchange cluster state information.
-    *   `RunCommand`: Runs a command in the cluster. It includes a `Command Level` field to specify whether the command should be run on the `node` or the `cluster`. Accepts a `replication` field in the metadata to specify whether the command should be replicated (needed to avoid infinite loops in commands that run on more than one node).
+    *   `ForwardCommand`: Forwards a command to another node in the cluster.
+    *   `Rebalance`: Used for streaming commands to rebalance the cluster.
+
+### External API
+
+The external gRPC API is used for communication with clients. The following services are available:
+
+*   `ExternalServer`:
+    *   `Healthcheck`: Returns the status of the cluster.
+    *   `RunCommand`: Runs a command in the cluster. It manages forwarding and replication.
     *   `StreamCommand`: Used for streaming commands.
 
 To regenerate the proto buffer files, run the following command:

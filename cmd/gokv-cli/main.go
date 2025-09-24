@@ -18,8 +18,8 @@ import (
 )
 
 var (
-	uri  string
-	cert string
+	uri string
+	ca  string
 )
 
 var rootCmd = &cobra.Command{
@@ -131,14 +131,14 @@ func init() {
 		uri = "localhost:50051"
 	}
 
-	cert = os.Getenv("GOKV_CLIENT_CERT")
+	ca = os.Getenv("GOKV_CLIENT_CA")
 
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(runCmd)
 }
 
 func createConnection() (*grpc.ClientConn, error) {
-	tlsCfg, err := tls.BuildClientTLSConfig("certs/ca.cert.pem", "", "", "localhost")
+	tlsCfg, err := tls.BuildClientTLSConfig(ca, "", "", uri)
 	if err != nil {
 		return nil, err
 	}
