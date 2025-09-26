@@ -6,5 +6,5 @@ message_timeout: 1s
 replicas: 2
 
 hashmap:
-  shards: 256
-  shards_per_cursor: 178
+  shards: 512
+  shards_per_cursor: 128
