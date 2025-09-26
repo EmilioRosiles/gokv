@@ -100,8 +100,6 @@ func (cm *ClusterManager) HScan(cur string, args ...[]byte) (*commonpb.CommandRe
 		return nil, errors.New("hscan: cursor must be a integer")
 	}
 
-	fmt.Println("Before next cursor calc?")
-
 	nodeIDs := cm.HashRing.GetNodes()
 	cursorPerNode := int(math.Ceil(float64(cm.HashMap.ShardsCount) / float64(cm.HashMap.ShardsPerCursor)))
 	totalCursors := cursorPerNode * len(nodeIDs)
