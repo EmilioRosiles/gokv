@@ -1,21 +1,16 @@
-package command
+package registry
 
 import (
 	"sync"
-)
 
-type CommandLevel int
-
-const (
-	Node CommandLevel = iota
-	Replica
-	Cluster
+	"gokv/internal/hashring"
+	"gokv/proto/commonpb"
 )
 
 type Command struct {
-	Run   func(key string, args ...[]byte) (any, error)
-	Level CommandLevel
-	Aggr  func(results ...any) (any, error)
+	Run             func(key string, args ...[]byte) (*commonpb.CommandResponse, error)
+	Replicate       bool
+	ResponsibleFunc func(req *commonpb.CommandRequest, hr *hashring.HashRing) (string, error)
 }
 
 // CommandRegistry stores and manages command handlers.

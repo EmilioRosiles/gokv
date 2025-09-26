@@ -75,7 +75,7 @@ func (x *KeyValue) GetValue() []byte {
 
 type KeyValueList struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	List          []*KeyValue            `protobuf:"bytes,1,rep,name=list,proto3" json:"list,omitempty"`
+	Data          []*KeyValue            `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -110,16 +110,17 @@ func (*KeyValueList) Descriptor() ([]byte, []int) {
 	return file_commonpb_common_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *KeyValueList) GetList() []*KeyValue {
+func (x *KeyValueList) GetData() []*KeyValue {
 	if x != nil {
-		return x.List
+		return x.Data
 	}
 	return nil
 }
 
 type KeyValueMap struct {
 	state         protoimpl.MessageState   `protogen:"open.v1"`
-	Map           map[string]*KeyValueList `protobuf:"bytes,1,rep,name=map,proto3" json:"map,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Cursor        int64                    `protobuf:"varint,1,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	Data          map[string]*KeyValueList `protobuf:"bytes,2,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -154,9 +155,16 @@ func (*KeyValueMap) Descriptor() ([]byte, []int) {
 	return file_commonpb_common_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *KeyValueMap) GetMap() map[string]*KeyValueList {
+func (x *KeyValueMap) GetCursor() int64 {
 	if x != nil {
-		return x.Map
+		return x.Cursor
+	}
+	return 0
+}
+
+func (x *KeyValueMap) GetData() map[string]*KeyValueList {
+	if x != nil {
+		return x.Data
 	}
 	return nil
 }
@@ -346,7 +354,7 @@ type CommandResponse_List struct {
 }
 
 type CommandResponse_Map struct {
-	Map *KeyValueMap `protobuf:"bytes,6,opt,name=map,proto3,oneof"` // For key/value maps
+	Map *KeyValueMap `protobuf:"bytes,6,opt,name=map,proto3,oneof"` // For key/value maps (HSCAN)
 }
 
 func (*CommandResponse_Value) isCommandResponse_Response() {}
@@ -368,10 +376,11 @@ const file_commonpb_common_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\fR\x05value\"6\n" +
 	"\fKeyValueList\x12&\n" +
-	"\x04list\x18\x01 \x03(\v2\x12.commonpb.KeyValueR\x04list\"\x8f\x01\n" +
-	"\vKeyValueMap\x120\n" +
-	"\x03map\x18\x01 \x03(\v2\x1e.commonpb.KeyValueMap.MapEntryR\x03map\x1aN\n" +
-	"\bMapEntry\x12\x10\n" +
+	"\x04data\x18\x01 \x03(\v2\x12.commonpb.KeyValueR\x04data\"\xab\x01\n" +
+	"\vKeyValueMap\x12\x16\n" +
+	"\x06cursor\x18\x01 \x01(\x03R\x06cursor\x123\n" +
+	"\x04data\x18\x02 \x03(\v2\x1f.commonpb.KeyValueMap.DataEntryR\x04data\x1aO\n" +
+	"\tDataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
 	"\x05value\x18\x02 \x01(\v2\x16.commonpb.KeyValueListR\x05value:\x028\x01\"P\n" +
 	"\x0eCommandRequest\x12\x18\n" +
@@ -407,14 +416,14 @@ var file_commonpb_common_proto_goTypes = []any{
 	(*KeyValueMap)(nil),     // 2: commonpb.KeyValueMap
 	(*CommandRequest)(nil),  // 3: commonpb.CommandRequest
 	(*CommandResponse)(nil), // 4: commonpb.CommandResponse
-	nil,                     // 5: commonpb.KeyValueMap.MapEntry
+	nil,                     // 5: commonpb.KeyValueMap.DataEntry
 }
 var file_commonpb_common_proto_depIdxs = []int32{
-	0, // 0: commonpb.KeyValueList.list:type_name -> commonpb.KeyValue
-	5, // 1: commonpb.KeyValueMap.map:type_name -> commonpb.KeyValueMap.MapEntry
+	0, // 0: commonpb.KeyValueList.data:type_name -> commonpb.KeyValue
+	5, // 1: commonpb.KeyValueMap.data:type_name -> commonpb.KeyValueMap.DataEntry
 	1, // 2: commonpb.CommandResponse.list:type_name -> commonpb.KeyValueList
 	2, // 3: commonpb.CommandResponse.map:type_name -> commonpb.KeyValueMap
-	1, // 4: commonpb.KeyValueMap.MapEntry.value:type_name -> commonpb.KeyValueList
+	1, // 4: commonpb.KeyValueMap.DataEntry.value:type_name -> commonpb.KeyValueList
 	5, // [5:5] is the sub-list for method output_type
 	5, // [5:5] is the sub-list for method input_type
 	5, // [5:5] is the sub-list for extension type_name
