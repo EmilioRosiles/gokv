@@ -10,11 +10,12 @@ message KeyValue {
 }
 
 message KeyValueList {
-  repeated KeyValue list = 1;
+  repeated KeyValue data = 1;
 }
 
 message KeyValueMap {
-  map<string, KeyValueList> map = 1;
+  int64 cursor = 1;
+  map<string, KeyValueList> data = 2;
 }
 
 message CommandRequest {
@@ -30,6 +31,6 @@ message CommandResponse {
     bool success = 3;       // For simple ack responses (e.g. `HSET`)
     int64 count = 4;        // For counts (e.g. `HDEL`)
     KeyValueList list = 5;  // For key/value lists (e.g., `HGET hash` or `HGET hash field1 field2` )
-    KeyValueMap map = 6;    // For key/value maps
+    KeyValueMap map = 6;    // For key/value maps (HSCAN)
   }
 }

@@ -2,14 +2,10 @@ package hashmap
 
 import (
 	"errors"
-	"fmt"
 	"hash/fnv"
 	"runtime"
 	"sync"
 	"time"
-
-	"gokv/internal/command"
-	"gokv/proto/commonpb"
 )
 
 // fieldEntry represents an individual field in a hash, with its own TTL.
@@ -24,8 +20,6 @@ type HashEntry struct {
 	Items map[string]*FieldEntry // The map of fields in the hash.
 }
 
-const shardCount = 256
-
 // shard represents a shard of the hash map.
 type shard struct {
 	mu     sync.RWMutex
@@ -34,20 +28,22 @@ type shard struct {
 
 // HashMap is a thread-safe, in-memory key-value store that supports field-level TTLs.
 type HashMap struct {
-	shards  [shardCount]*shard // The shards of the hash map.
-	janitor *janitor           // The janitor for cleaning up expired items.
+	shards          []*shard // The shards of the hash map.
+	janitor         *janitor // The janitor for cleaning up expired items.
+	ShardsCount     uint64
+	ShardsPerCursor int
 }
 
 // getShard returns the shard for a given key.
 func (c *HashMap) getShard(key string) *shard {
 	hasher := fnv.New64a()
 	hasher.Write([]byte(key))
-	return c.shards[hasher.Sum64()%shardCount]
+	return c.shards[hasher.Sum64()%c.ShardsCount]
 }
 
-// HGet retrieves a field from a hash.
+// Get retrieves a map of key FieldEntry from the HashMap.
 // It returns the data if the field exists and has not expired.
-func (c *HashMap) HGet(hash string, args ...[]byte) (any, error) {
+func (c *HashMap) Get(hash string, keys ...string) (map[string]*FieldEntry, error) {
 	shard := c.getShard(hash)
 	shard.mu.RLock()
 	he, ok := shard.hashes[hash]
@@ -60,79 +56,52 @@ func (c *HashMap) HGet(hash string, args ...[]byte) (any, error) {
 	he.Mu.RLock()
 	defer he.Mu.RUnlock()
 
-	if len(args) == 0 {
-		kvList := &commonpb.KeyValueList{
-			List: make([]*commonpb.KeyValue, 0),
-		}
+	entries := make(map[string]*FieldEntry, 0)
 
+	if len(keys) == 0 {
 		for key, entry := range he.Items {
 			if entry.ExpiresAt > 0 && time.Now().Unix() > entry.ExpiresAt {
 				continue
 			}
-			kvList.List = append(kvList.List, &commonpb.KeyValue{Key: key, Value: entry.Data})
+			entries[key] = entry
 		}
 
-		return kvList, nil
+		return entries, nil
 	}
 
-	if len(args) == 1 {
-		entry, ok := he.Items[string(args[0])]
-		if !ok || entry.ExpiresAt > 0 && time.Now().Unix() > entry.ExpiresAt {
-			return nil, errors.New("hget: key not found")
-		}
-
-		return entry.Data, nil
-	}
-
-	kvList := &commonpb.KeyValueList{
-		List: make([]*commonpb.KeyValue, 0),
-	}
-
-	for _, arg := range args {
-		key := string(arg)
+	for _, key := range keys {
 		entry, ok := he.Items[key]
 		if !ok || entry.ExpiresAt > 0 && time.Now().Unix() > entry.ExpiresAt {
 			continue
 		}
-		kvList.List = append(kvList.List, &commonpb.KeyValue{Key: key, Value: entry.Data})
+		entries[key] = entry
 	}
-	return kvList, nil
+
+	return entries, nil
 }
 
-// HSet sets a field in a hash to a given value with a specific TTL.
+// Set sets a field in a hash to a given value with a specific TTL.
 // If the hash does not exist, it will be created.
 // If ttl is 0, the field will not expire.
-func (c *HashMap) HSet(hash string, args ...[]byte) (any, error) {
-	if len(args) < 2 || len(args) > 3 {
-		return nil, errors.New("hset: requires 2 or 3 arguments: field, value[, ttl]")
-	}
-	key := string(args[0])
-	data := args[1]
+func (c *HashMap) Set(hash, key string, data []byte, ttl time.Duration) {
 	var expiresAt int64 = 0
-	if len(args) == 3 {
-		var err error
-		ttl, err := time.ParseDuration(string(args[2]))
-		if err != nil {
-			return nil, fmt.Errorf("hset: invalid TTL: %w", err)
-		}
-		if ttl > 0 {
-			expiresAt = time.Now().Add(ttl).Unix()
-		}
+	if ttl > 0 {
+		expiresAt = time.Now().Add(ttl).Unix()
 	}
+
+	shard := c.getShard(hash)
 
 	entry := &FieldEntry{
 		Data:      data,
 		ExpiresAt: expiresAt,
 	}
 
-	shard := c.getShard(hash)
 	shard.mu.RLock()
 	he, ok := shard.hashes[hash]
 	shard.mu.RUnlock()
 
 	if !ok {
 		shard.mu.Lock()
-		// Re-check in case another goroutine created it while we waited for the lock.
 		if he, ok = shard.hashes[hash]; !ok {
 			he = &HashEntry{Items: make(map[string]*FieldEntry)}
 			shard.hashes[hash] = he
@@ -143,39 +112,43 @@ func (c *HashMap) HSet(hash string, args ...[]byte) (any, error) {
 	he.Mu.Lock()
 	he.Items[key] = entry
 	he.Mu.Unlock()
-	return true, nil
 }
 
-// HDel deletes one or more fields from a hash. If no args are passed, it deletes the entire hash.
-func (c *HashMap) HDel(hash string, args ...[]byte) (any, error) {
+// Del deletes one or more fields from a hash. If no keys are passed, it deletes the entire hash.
+func (c *HashMap) Del(hash string, keys ...string) int {
 	shard := c.getShard(hash)
+
 	shard.mu.RLock()
 	he, ok := shard.hashes[hash]
 	shard.mu.RUnlock()
 
 	if !ok {
-		return int64(0), nil
+		return 0
 	}
 
-	// If no args, delete the whole hash.
-	if len(args) == 0 {
+	// If no keys, delete the whole hash.
+	if len(keys) == 0 {
 		shard.mu.Lock()
+		he := shard.hashes[hash]
+		he.Mu.RLock()
+		count := len(he.Items)
+		he.Mu.RUnlock()
 		delete(shard.hashes, hash)
 		shard.mu.Unlock()
-		return int64(1), nil
+		return count
 	}
 
 	// Otherwise, delete specified keys.
 	deletedCount := 0
 	he.Mu.Lock()
 	defer he.Mu.Unlock()
-	for _, keyBytes := range args {
-		key := string(keyBytes)
+	for _, key := range keys {
 		if _, ok := he.Items[key]; ok {
 			delete(he.Items, key)
 			deletedCount++
 		}
 	}
+
 	isEmpty := len(he.Items) == 0
 
 	if isEmpty {
@@ -184,32 +157,33 @@ func (c *HashMap) HDel(hash string, args ...[]byte) (any, error) {
 		shard.mu.Unlock()
 	}
 
-	return int64(deletedCount), nil
+	return deletedCount
 }
 
 // Scan iterates over all hashes in the hash map and calls the callback for each pair.
-func (c *HashMap) ScanHash(callback func(hash string, he *HashEntry)) {
-	for i := range shardCount {
+// If the cursor is -1 it will scan the whole HashMap
+func (c *HashMap) Scan(cursor int, callback func(hash string, he *HashEntry)) {
+	start := cursor * c.ShardsPerCursor
+	end := start + c.ShardsPerCursor
+
+	if cursor == -1 {
+		start = 0
+		end = int(c.ShardsCount)
+	}
+
+	if start >= int(c.ShardsCount) {
+		return
+	}
+
+	if end > int(c.ShardsCount) {
+		end = int(c.ShardsCount)
+	}
+
+	for i := start; i < end; i++ {
 		shard := c.shards[i]
 		shard.mu.RLock()
 		for hash, he := range shard.hashes {
 			callback(hash, he)
-		}
-		shard.mu.RUnlock()
-	}
-}
-
-// Scan iterates over all hash key-value in the hash map and calls the callback for each pair.
-func (c *HashMap) ScanEntry(callback func(hash string, key string, entry *FieldEntry)) {
-	for i := range shardCount {
-		shard := c.shards[i]
-		shard.mu.RLock()
-		for hash, he := range shard.hashes {
-			he.Mu.RLock()
-			for key, entry := range he.Items {
-				callback(hash, key, entry)
-			}
-			he.Mu.RUnlock()
 		}
 		shard.mu.RUnlock()
 	}
@@ -239,7 +213,7 @@ func (j *janitor) run(c *HashMap) {
 func (c *HashMap) deleteExpired() {
 	now := time.Now().Unix()
 
-	for i := range shardCount {
+	for i := 0; i < int(c.ShardsCount); i++ {
 		shard := c.shards[i]
 		shard.mu.Lock()
 		for hash, he := range shard.hashes {
@@ -266,9 +240,14 @@ func stopJanitor(c *HashMap) {
 
 // NewHashMap creates a new HashMap with a background cleanup goroutine.
 // The cleanupInterval determines how often the janitor checks for expired items.
-func NewHashMap(cr *command.CommandRegistry, cleanupInterval time.Duration) *HashMap {
-	c := &HashMap{}
-	for i := range shardCount {
+func NewHashMap(cleanupInterval time.Duration, shardsCount int, shardsPerCursor int) *HashMap {
+	c := &HashMap{
+		shards:          make([]*shard, shardsCount),
+		ShardsCount:     uint64(shardsCount),
+		ShardsPerCursor: shardsPerCursor,
+	}
+
+	for i := range shardsCount {
 		c.shards[i] = &shard{
 			hashes: make(map[string]*HashEntry),
 		}
@@ -283,11 +262,6 @@ func NewHashMap(cr *command.CommandRegistry, cleanupInterval time.Duration) *Has
 		go j.run(c)
 		runtime.SetFinalizer(c, stopJanitor)
 	}
-
-	// Register HashMap commands.
-	cr.Register("HGET", command.Command{Run: c.HGet})
-	cr.Register("HSET", command.Command{Run: c.HSet, Level: command.Replica})
-	cr.Register("HDEL", command.Command{Run: c.HDel, Level: command.Replica})
 
 	return c
 }

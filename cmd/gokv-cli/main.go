@@ -103,14 +103,15 @@ var runCmd = &cobra.Command{
 			fmt.Printf("Count: %d\n", r.Count)
 		case *commonpb.CommandResponse_List:
 			fmt.Printf("List: \n")
-			for _, kv := range r.List.List {
+			for _, kv := range r.List.Data {
 				fmt.Printf("  - %s: %s\n", kv.Key, string(kv.Value))
 			}
 		case *commonpb.CommandResponse_Map:
+			fmt.Printf("Cursor: %d\n", r.Map.Cursor)
 			fmt.Printf("Map: \n")
-			for key, kvList := range r.Map.Map {
+			for key, kvList := range r.Map.Data {
 				fmt.Printf("  - %s:\n", key)
-				for _, kv := range kvList.List {
+				for _, kv := range kvList.Data {
 					fmt.Printf("    - %s: %s\n", kv.Key, string(kv.Value))
 				}
 			}

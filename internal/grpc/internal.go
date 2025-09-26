@@ -13,7 +13,6 @@ import (
 	"gokv/internal/cluster"
 	"gokv/internal/context/environment"
 	"gokv/internal/models/peer"
-	"gokv/internal/response"
 	"gokv/internal/tls"
 	"gokv/proto/commonpb"
 	"gokv/proto/internalpb"
@@ -91,10 +90,21 @@ func (s *internalServer) Heartbeat(ctx context.Context, req *internalpb.Heartbea
 func (s *internalServer) ForwardCommand(ctx context.Context, req *commonpb.CommandRequest) (*commonpb.CommandResponse, error) {
 	slog.Debug(fmt.Sprintf("gRPC internal: forwarded command %s %s", req.Command, req.Key))
 	responsibleNodeIDs := s.cm.HashRing.Get(req.Key)
-	var data any
+	cmd, ok := s.cm.CommandRegistry.Get(req.Command)
+	if !ok {
+		return nil, fmt.Errorf("unknown command: %s", req.Command)
+	}
+
+	if cmd.ResponsibleFunc != nil {
+		if nodeID, err := cmd.ResponsibleFunc(req, s.cm.HashRing); err == nil {
+			responsibleNodeIDs = []string{nodeID}
+		}
+	}
+
+	var res *commonpb.CommandResponse
 	var err error
 	if slices.Contains(responsibleNodeIDs, s.cm.NodeID) {
-		data, err = s.cm.RunCommand(ctx, req)
+		res, err = s.cm.RunCommand(ctx, req)
 	} else {
 		err = fmt.Errorf("node %s not responsible for forwarded command %s %s", req.Command, s.cm.NodeID, req.Key)
 	}
@@ -103,12 +113,7 @@ func (s *internalServer) ForwardCommand(ctx context.Context, req *commonpb.Comma
 		return &commonpb.CommandResponse{Error: err.Error()}, nil
 	}
 
-	resp, err := response.Marshal(data)
-	if err != nil {
-		return &commonpb.CommandResponse{Error: err.Error()}, nil
-	}
-
-	return resp, nil
+	return res, nil
 }
 
 // Rebalance handles key migration to rebalance the cluster when the state changes

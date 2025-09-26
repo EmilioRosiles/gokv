@@ -5,10 +5,16 @@ import (
 	"gokv/internal/context/environment"
 	"log/slog"
 	"os"
+	"reflect"
 	"time"
 
 	"gopkg.in/yaml.v3"
 )
+
+type HashMapConfig struct {
+	Shards          int `yaml:"shards"`
+	ShardsPerCursor int `yaml:"shards_per_cursor"`
+}
 
 type Config struct {
 	CleanupInterval   time.Duration `yaml:"cleanup_interval"`
@@ -17,6 +23,7 @@ type Config struct {
 	VNodeCount        int           `yaml:"v_node_count"`
 	MessageTimeout    time.Duration `yaml:"message_timeout"`
 	Replicas          int           `yaml:"replicas"`
+	HashMap           HashMapConfig `yaml:"hashmap"`
 }
 
 func Default() *Config {
@@ -27,31 +34,55 @@ func Default() *Config {
 		VNodeCount:        3,
 		MessageTimeout:    1 * time.Second,
 		Replicas:          2,
+		HashMap: HashMapConfig{
+			Shards:          512,
+			ShardsPerCursor: 128,
+		},
 	}
 }
 
 func LoadConfig(env *environment.Environment) *Config {
-	// If no config path is provided, load the default configuration.
-	if env.CfgPath == "" {
-		slog.Debug("config: loading default configuration")
-		return Default()
+	config := Default()
+
+	if env.CfgPath != "" {
+		yamlFile, err := os.ReadFile(env.CfgPath)
+		if err != nil {
+			slog.Warn(fmt.Sprintf("config: could not read config file, using default configuration: %v", err))
+		} else {
+			var yamlConfig Config
+			err = yaml.Unmarshal(yamlFile, &yamlConfig)
+			if err != nil {
+				slog.Error(fmt.Sprintf("config: error unmarshalling YAML, using default configuration: %v", err))
+			} else {
+				mergeConfigs(config, &yamlConfig)
+				slog.Debug(fmt.Sprintf("config: loaded and merged configuration from: %s", env.CfgPath))
+			}
+		}
+	} else {
+		slog.Debug("config: no config path provided, using default configuration")
 	}
 
-	// Read the YAML file.
-	yamlFile, err := os.ReadFile(env.CfgPath)
-	if err != nil {
-		slog.Warn(fmt.Sprintf("config: could not read config file, loading default configuration: %v", err))
-		return Default()
-	}
+	slog.Info(fmt.Sprintf("configs: %v", config))
 
-	// Unmarshal the YAML file into the Config struct.
-	var config Config
-	err = yaml.Unmarshal(yamlFile, &config)
-	if err != nil {
-		slog.Error(fmt.Sprintf("config: error unmarshalling YAML: %v", err))
-		os.Exit(1)
-	}
+	return config
+}
 
-	slog.Debug(fmt.Sprintf("config: loaded configuration from: %s", env.CfgPath))
-	return &config
+func mergeConfigs(base *Config, overlay *Config) {
+	baseVal := reflect.ValueOf(base).Elem()
+	overlayVal := reflect.ValueOf(overlay).Elem()
+
+	for i := 0; i < baseVal.NumField(); i++ {
+		baseField := baseVal.Field(i)
+		overlayField := overlayVal.Field(i)
+
+		if overlayField.Kind() == reflect.Struct {
+			for j := 0; j < overlayField.NumField(); j++ {
+				if !overlayField.Field(j).IsZero() {
+					baseField.Field(j).Set(overlayField.Field(j))
+				}
+			}
+		} else if !overlayField.IsZero() {
+			baseField.Set(overlayField)
+		}
+	}
 }

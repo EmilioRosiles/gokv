@@ -9,10 +9,8 @@ import (
 	"os"
 
 	"gokv/internal/cluster"
-	"gokv/internal/command"
 	"gokv/internal/context/environment"
 	"gokv/internal/models/peer"
-	"gokv/internal/response"
 	"gokv/internal/tls"
 	"gokv/proto/commonpb"
 	"gokv/proto/externalpb"
@@ -86,12 +84,23 @@ func (s *externalServer) Healthcheck(ctx context.Context, req *externalpb.Health
 func (s *externalServer) RunCommand(ctx context.Context, req *commonpb.CommandRequest) (*commonpb.CommandResponse, error) {
 	slog.Debug(fmt.Sprintf("gRPC external: received command %s %s", req.Command, req.Key))
 	responsibleNodeIDs := s.cm.HashRing.Get(req.Key)
-	var data any
+	cmd, ok := s.cm.CommandRegistry.Get(req.Command)
+	if !ok {
+		return nil, fmt.Errorf("unknown command: %s", req.Command)
+	}
+
+	if cmd.ResponsibleFunc != nil {
+		if nodeID, err := cmd.ResponsibleFunc(req, s.cm.HashRing); err == nil {
+			responsibleNodeIDs = []string{nodeID}
+		}
+	}
+
+	var res *commonpb.CommandResponse
 	var err error
 	if responsibleNodeIDs[0] == s.cm.NodeID {
-		data, err = s.cm.RunCommand(ctx, req)
+		res, err = s.cm.RunCommand(ctx, req)
 	} else {
-		data, err = s.cm.ForwardCommand(ctx, req, responsibleNodeIDs[0])
+		res, err = s.cm.ForwardCommand(ctx, req, responsibleNodeIDs[0])
 		if err != nil {
 			s.cm.RemoveNode(responsibleNodeIDs[0])
 			slog.Debug(fmt.Sprintf("gRPC external: fail to forward command %s %s trying again...", req.Command, req.Key))
@@ -103,18 +112,11 @@ func (s *externalServer) RunCommand(ctx context.Context, req *commonpb.CommandRe
 		return &commonpb.CommandResponse{Error: err.Error()}, nil
 	}
 
-	resp, err := response.Marshal(data)
-	if err != nil {
-		return &commonpb.CommandResponse{Error: err.Error()}, nil
+	if cmd.Replicate && s.cm.HashRing.Replicas > 1 {
+		go s.cm.ReplicateCommand(req)
 	}
 
-	if s.cm.HashRing.Replicas > 1 {
-		if cmd, ok := s.cm.CommandRegistry.Get(req.Command); ok && cmd.Level == command.Replica {
-			go s.cm.ReplicateCommand(req)
-		}
-	}
-
-	return resp, nil
+	return res, nil
 }
 
 // StreamCommand handles incoming streaming command requests from other nodes in the cluster.

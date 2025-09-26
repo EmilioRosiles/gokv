@@ -107,6 +107,29 @@ func (h *HashRing) Get(key string) []string {
 	return uniqueNodes
 }
 
+// GetNodes returns a sorted list of unique node IDs in the hash ring.
+func (h *HashRing) GetNodes() []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	if len(h.hashMap) == 0 {
+		return []string{}
+	}
+
+	seen := make(map[string]struct{}, len(h.hashMap)/h.vNodeCount)
+	for _, nodeID := range h.hashMap {
+		seen[nodeID] = struct{}{}
+	}
+
+	nodes := make([]string, 0, len(seen))
+	for nodeID := range seen {
+		nodes = append(nodes, nodeID)
+	}
+
+	sort.Strings(nodes)
+	return nodes
+}
+
 // GetVersion returns a hash of all the alive peers in the cluster.
 func (h *HashRing) GetVersion() uint64 {
 	h.mu.RLock()
