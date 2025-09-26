@@ -91,7 +91,7 @@ func (s *externalServer) RunCommand(ctx context.Context, req *commonpb.CommandRe
 
 	if cmd.ResponsibleFunc != nil {
 		if nodeID, err := cmd.ResponsibleFunc(req, s.cm.HashRing); err == nil {
-			responsibleNodeIDs[0] = nodeID
+			responsibleNodeIDs = []string{nodeID}
 		}
 	}
 
