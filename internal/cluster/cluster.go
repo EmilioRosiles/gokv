@@ -44,7 +44,7 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 	cr := registry.NewCommandRegistry()
 	hashMap := hashmap.NewHashMap(cfg.CleanupInterval, cfg.HashMap.Shards, cfg.HashMap.ShardsPerCursor)
 	peerMap := make(map[string]*peer.Peer)
-	hashRing := hashring.New(cfg.VNodeCount, cfg.Replicas, nil)
+	hashRing := hashring.New(cfg.VNodeCount, cfg.Replicas)
 	connPool := pool.NewGrpcConnectionPool(func(address string) (*grpc.ClientConn, error) {
 		creds := insecure.NewCredentials()
 		if env.InternalTlsClientCertPath != "" || env.InternalTlsClientKeyPath != "" {

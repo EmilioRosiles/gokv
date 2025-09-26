@@ -4,18 +4,23 @@ option go_package = "gokv/proto/commonpb;commonpb";
 
 package commonpb;
 
-message KeyValue {
-  string key = 1;
-  bytes value = 2;
+message Value {
+  oneof kind {
+    bytes bytes = 1;
+    string str = 2;
+    int64 int = 3;
+    bool bool = 4;
+    ListValue list = 5;
+    MapValue map = 6;
+  }
 }
 
-message KeyValueList {
-  repeated KeyValue data = 1;
+message ListValue {
+  repeated Value values = 1;
 }
 
-message KeyValueMap {
-  int64 cursor = 1;
-  map<string, KeyValueList> data = 2;
+message MapValue {
+  map<string, Value> values = 1;
 }
 
 message CommandRequest {
@@ -26,11 +31,5 @@ message CommandRequest {
 
 message CommandResponse {
   string error = 1;
-  oneof response {
-    bytes value = 2;        // For single value responses (e.g., `HGET hash field`)
-    bool success = 3;       // For simple ack responses (e.g. `HSET`)
-    int64 count = 4;        // For counts (e.g. `HDEL`)
-    KeyValueList list = 5;  // For key/value lists (e.g., `HGET hash` or `HGET hash field1 field2` )
-    KeyValueMap map = 6;    // For key/value maps (HSCAN)
-  }
+  Value response = 2;
 }

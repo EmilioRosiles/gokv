@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"gokv/internal/tls"
@@ -94,30 +95,8 @@ var runCmd = &cobra.Command{
 			log.Fatalf("Error: %s", res.Error)
 		}
 
-		switch r := res.Response.(type) {
-		case *commonpb.CommandResponse_Value:
-			fmt.Printf("Result: %s\n", string(r.Value))
-		case *commonpb.CommandResponse_Success:
-			fmt.Printf("Success: %t\n", r.Success)
-		case *commonpb.CommandResponse_Count:
-			fmt.Printf("Count: %d\n", r.Count)
-		case *commonpb.CommandResponse_List:
-			fmt.Printf("List: \n")
-			for _, kv := range r.List.Data {
-				fmt.Printf("  - %s: %s\n", kv.Key, string(kv.Value))
-			}
-		case *commonpb.CommandResponse_Map:
-			fmt.Printf("Cursor: %d\n", r.Map.Cursor)
-			fmt.Printf("Map: \n")
-			for key, kvList := range r.Map.Data {
-				fmt.Printf("  - %s:\n", key)
-				for _, kv := range kvList.Data {
-					fmt.Printf("    - %s: %s\n", kv.Key, string(kv.Value))
-				}
-			}
-		default:
-			fmt.Println("OK")
-		}
+		printValue(res.Response, 0)
+		fmt.Print("\n")
 	},
 }
 
@@ -149,6 +128,57 @@ func createConnection() (*grpc.ClientConn, error) {
 		grpc.WithTransportCredentials(creds),
 		grpc.WithConnectParams(grpc.ConnectParams{MinConnectTimeout: 5 * time.Second}),
 	)
+}
+
+func printValue(v *commonpb.Value, indent int) {
+	pad := func() { fmt.Print(strings.Repeat(" ", indent)) }
+
+	switch x := v.Kind.(type) {
+	case *commonpb.Value_Str:
+		fmt.Printf("\"%q\"", x.Str)
+
+	case *commonpb.Value_Int:
+		fmt.Printf("%d", x.Int)
+
+	case *commonpb.Value_Bool:
+		fmt.Printf("%t", x.Bool)
+
+	case *commonpb.Value_Bytes:
+		fmt.Printf("\"%s\"", string(x.Bytes))
+
+	case *commonpb.Value_List:
+		fmt.Println("[")
+		for i, elem := range x.List.Values {
+			pad()
+			printValue(elem, indent+2)
+			if i > 0 && i < len(x.List.Values)-1 {
+				fmt.Print(",")
+			}
+			fmt.Println()
+		}
+		fmt.Print("]")
+
+	case *commonpb.Value_Map:
+		fmt.Println("{")
+		n := len(x.Map.Values)
+		i := 0
+		for k, elem := range x.Map.Values {
+			pad()
+			fmt.Printf("  %q: ", k)
+			printValue(elem, indent+2)
+			i++
+			if i < n {
+				fmt.Print(",")
+			}
+			fmt.Println()
+		}
+		pad()
+		fmt.Print("}")
+
+	default:
+		fmt.Print("<unknown>")
+
+	}
 }
 
 func main() {

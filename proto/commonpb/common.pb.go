@@ -21,28 +21,35 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type KeyValue struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-	Value         []byte                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+type Value struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Kind:
+	//
+	//	*Value_Bytes
+	//	*Value_Str
+	//	*Value_Int
+	//	*Value_Bool
+	//	*Value_List
+	//	*Value_Map
+	Kind          isValue_Kind `protobuf_oneof:"kind"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *KeyValue) Reset() {
-	*x = KeyValue{}
+func (x *Value) Reset() {
+	*x = Value{}
 	mi := &file_commonpb_common_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *KeyValue) String() string {
+func (x *Value) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*KeyValue) ProtoMessage() {}
+func (*Value) ProtoMessage() {}
 
-func (x *KeyValue) ProtoReflect() protoreflect.Message {
+func (x *Value) ProtoReflect() protoreflect.Message {
 	mi := &file_commonpb_common_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -54,117 +61,196 @@ func (x *KeyValue) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use KeyValue.ProtoReflect.Descriptor instead.
-func (*KeyValue) Descriptor() ([]byte, []int) {
+// Deprecated: Use Value.ProtoReflect.Descriptor instead.
+func (*Value) Descriptor() ([]byte, []int) {
 	return file_commonpb_common_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *KeyValue) GetKey() string {
+func (x *Value) GetKind() isValue_Kind {
 	if x != nil {
-		return x.Key
+		return x.Kind
+	}
+	return nil
+}
+
+func (x *Value) GetBytes() []byte {
+	if x != nil {
+		if x, ok := x.Kind.(*Value_Bytes); ok {
+			return x.Bytes
+		}
+	}
+	return nil
+}
+
+func (x *Value) GetStr() string {
+	if x != nil {
+		if x, ok := x.Kind.(*Value_Str); ok {
+			return x.Str
+		}
 	}
 	return ""
 }
 
-func (x *KeyValue) GetValue() []byte {
+func (x *Value) GetInt() int64 {
 	if x != nil {
-		return x.Value
-	}
-	return nil
-}
-
-type KeyValueList struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Data          []*KeyValue            `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *KeyValueList) Reset() {
-	*x = KeyValueList{}
-	mi := &file_commonpb_common_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *KeyValueList) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*KeyValueList) ProtoMessage() {}
-
-func (x *KeyValueList) ProtoReflect() protoreflect.Message {
-	mi := &file_commonpb_common_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
+		if x, ok := x.Kind.(*Value_Int); ok {
+			return x.Int
 		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use KeyValueList.ProtoReflect.Descriptor instead.
-func (*KeyValueList) Descriptor() ([]byte, []int) {
-	return file_commonpb_common_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *KeyValueList) GetData() []*KeyValue {
-	if x != nil {
-		return x.Data
-	}
-	return nil
-}
-
-type KeyValueMap struct {
-	state         protoimpl.MessageState   `protogen:"open.v1"`
-	Cursor        int64                    `protobuf:"varint,1,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	Data          map[string]*KeyValueList `protobuf:"bytes,2,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *KeyValueMap) Reset() {
-	*x = KeyValueMap{}
-	mi := &file_commonpb_common_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *KeyValueMap) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*KeyValueMap) ProtoMessage() {}
-
-func (x *KeyValueMap) ProtoReflect() protoreflect.Message {
-	mi := &file_commonpb_common_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use KeyValueMap.ProtoReflect.Descriptor instead.
-func (*KeyValueMap) Descriptor() ([]byte, []int) {
-	return file_commonpb_common_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *KeyValueMap) GetCursor() int64 {
-	if x != nil {
-		return x.Cursor
 	}
 	return 0
 }
 
-func (x *KeyValueMap) GetData() map[string]*KeyValueList {
+func (x *Value) GetBool() bool {
 	if x != nil {
-		return x.Data
+		if x, ok := x.Kind.(*Value_Bool); ok {
+			return x.Bool
+		}
+	}
+	return false
+}
+
+func (x *Value) GetList() *ListValue {
+	if x != nil {
+		if x, ok := x.Kind.(*Value_List); ok {
+			return x.List
+		}
+	}
+	return nil
+}
+
+func (x *Value) GetMap() *MapValue {
+	if x != nil {
+		if x, ok := x.Kind.(*Value_Map); ok {
+			return x.Map
+		}
+	}
+	return nil
+}
+
+type isValue_Kind interface {
+	isValue_Kind()
+}
+
+type Value_Bytes struct {
+	Bytes []byte `protobuf:"bytes,1,opt,name=bytes,proto3,oneof"`
+}
+
+type Value_Str struct {
+	Str string `protobuf:"bytes,2,opt,name=str,proto3,oneof"`
+}
+
+type Value_Int struct {
+	Int int64 `protobuf:"varint,3,opt,name=int,proto3,oneof"`
+}
+
+type Value_Bool struct {
+	Bool bool `protobuf:"varint,4,opt,name=bool,proto3,oneof"`
+}
+
+type Value_List struct {
+	List *ListValue `protobuf:"bytes,5,opt,name=list,proto3,oneof"`
+}
+
+type Value_Map struct {
+	Map *MapValue `protobuf:"bytes,6,opt,name=map,proto3,oneof"`
+}
+
+func (*Value_Bytes) isValue_Kind() {}
+
+func (*Value_Str) isValue_Kind() {}
+
+func (*Value_Int) isValue_Kind() {}
+
+func (*Value_Bool) isValue_Kind() {}
+
+func (*Value_List) isValue_Kind() {}
+
+func (*Value_Map) isValue_Kind() {}
+
+type ListValue struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Values        []*Value               `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListValue) Reset() {
+	*x = ListValue{}
+	mi := &file_commonpb_common_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListValue) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListValue) ProtoMessage() {}
+
+func (x *ListValue) ProtoReflect() protoreflect.Message {
+	mi := &file_commonpb_common_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListValue.ProtoReflect.Descriptor instead.
+func (*ListValue) Descriptor() ([]byte, []int) {
+	return file_commonpb_common_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ListValue) GetValues() []*Value {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
+type MapValue struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Values        map[string]*Value      `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MapValue) Reset() {
+	*x = MapValue{}
+	mi := &file_commonpb_common_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MapValue) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MapValue) ProtoMessage() {}
+
+func (x *MapValue) ProtoReflect() protoreflect.Message {
+	mi := &file_commonpb_common_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MapValue.ProtoReflect.Descriptor instead.
+func (*MapValue) Descriptor() ([]byte, []int) {
+	return file_commonpb_common_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *MapValue) GetValues() map[string]*Value {
+	if x != nil {
+		return x.Values
 	}
 	return nil
 }
@@ -230,16 +316,9 @@ func (x *CommandRequest) GetArgs() [][]byte {
 }
 
 type CommandResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	Error string                 `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`
-	// Types that are valid to be assigned to Response:
-	//
-	//	*CommandResponse_Value
-	//	*CommandResponse_Success
-	//	*CommandResponse_Count
-	//	*CommandResponse_List
-	//	*CommandResponse_Map
-	Response      isCommandResponse_Response `protobuf_oneof:"response"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Error         string                 `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`
+	Response      *Value                 `protobuf:"bytes,2,opt,name=response,proto3" json:"response,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -281,121 +360,40 @@ func (x *CommandResponse) GetError() string {
 	return ""
 }
 
-func (x *CommandResponse) GetResponse() isCommandResponse_Response {
+func (x *CommandResponse) GetResponse() *Value {
 	if x != nil {
 		return x.Response
 	}
 	return nil
 }
 
-func (x *CommandResponse) GetValue() []byte {
-	if x != nil {
-		if x, ok := x.Response.(*CommandResponse_Value); ok {
-			return x.Value
-		}
-	}
-	return nil
-}
-
-func (x *CommandResponse) GetSuccess() bool {
-	if x != nil {
-		if x, ok := x.Response.(*CommandResponse_Success); ok {
-			return x.Success
-		}
-	}
-	return false
-}
-
-func (x *CommandResponse) GetCount() int64 {
-	if x != nil {
-		if x, ok := x.Response.(*CommandResponse_Count); ok {
-			return x.Count
-		}
-	}
-	return 0
-}
-
-func (x *CommandResponse) GetList() *KeyValueList {
-	if x != nil {
-		if x, ok := x.Response.(*CommandResponse_List); ok {
-			return x.List
-		}
-	}
-	return nil
-}
-
-func (x *CommandResponse) GetMap() *KeyValueMap {
-	if x != nil {
-		if x, ok := x.Response.(*CommandResponse_Map); ok {
-			return x.Map
-		}
-	}
-	return nil
-}
-
-type isCommandResponse_Response interface {
-	isCommandResponse_Response()
-}
-
-type CommandResponse_Value struct {
-	Value []byte `protobuf:"bytes,2,opt,name=value,proto3,oneof"` // For single value responses (e.g., `HGET hash field`)
-}
-
-type CommandResponse_Success struct {
-	Success bool `protobuf:"varint,3,opt,name=success,proto3,oneof"` // For simple ack responses (e.g. `HSET`)
-}
-
-type CommandResponse_Count struct {
-	Count int64 `protobuf:"varint,4,opt,name=count,proto3,oneof"` // For counts (e.g. `HDEL`)
-}
-
-type CommandResponse_List struct {
-	List *KeyValueList `protobuf:"bytes,5,opt,name=list,proto3,oneof"` // For key/value lists (e.g., `HGET hash` or `HGET hash field1 field2` )
-}
-
-type CommandResponse_Map struct {
-	Map *KeyValueMap `protobuf:"bytes,6,opt,name=map,proto3,oneof"` // For key/value maps (HSCAN)
-}
-
-func (*CommandResponse_Value) isCommandResponse_Response() {}
-
-func (*CommandResponse_Success) isCommandResponse_Response() {}
-
-func (*CommandResponse_Count) isCommandResponse_Response() {}
-
-func (*CommandResponse_List) isCommandResponse_Response() {}
-
-func (*CommandResponse_Map) isCommandResponse_Response() {}
-
 var File_commonpb_common_proto protoreflect.FileDescriptor
 
 const file_commonpb_common_proto_rawDesc = "" +
 	"\n" +
-	"\x15commonpb/common.proto\x12\bcommonpb\"2\n" +
-	"\bKeyValue\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\fR\x05value\"6\n" +
-	"\fKeyValueList\x12&\n" +
-	"\x04data\x18\x01 \x03(\v2\x12.commonpb.KeyValueR\x04data\"\xab\x01\n" +
-	"\vKeyValueMap\x12\x16\n" +
-	"\x06cursor\x18\x01 \x01(\x03R\x06cursor\x123\n" +
-	"\x04data\x18\x02 \x03(\v2\x1f.commonpb.KeyValueMap.DataEntryR\x04data\x1aO\n" +
-	"\tDataEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.commonpb.KeyValueListR\x05value:\x028\x01\"P\n" +
+	"\x15commonpb/common.proto\x12\bcommonpb\"\xb8\x01\n" +
+	"\x05Value\x12\x16\n" +
+	"\x05bytes\x18\x01 \x01(\fH\x00R\x05bytes\x12\x12\n" +
+	"\x03str\x18\x02 \x01(\tH\x00R\x03str\x12\x12\n" +
+	"\x03int\x18\x03 \x01(\x03H\x00R\x03int\x12\x14\n" +
+	"\x04bool\x18\x04 \x01(\bH\x00R\x04bool\x12)\n" +
+	"\x04list\x18\x05 \x01(\v2\x13.commonpb.ListValueH\x00R\x04list\x12&\n" +
+	"\x03map\x18\x06 \x01(\v2\x12.commonpb.MapValueH\x00R\x03mapB\x06\n" +
+	"\x04kind\"4\n" +
+	"\tListValue\x12'\n" +
+	"\x06values\x18\x01 \x03(\v2\x0f.commonpb.ValueR\x06values\"\x8e\x01\n" +
+	"\bMapValue\x126\n" +
+	"\x06values\x18\x01 \x03(\v2\x1e.commonpb.MapValue.ValuesEntryR\x06values\x1aJ\n" +
+	"\vValuesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12%\n" +
+	"\x05value\x18\x02 \x01(\v2\x0f.commonpb.ValueR\x05value:\x028\x01\"P\n" +
 	"\x0eCommandRequest\x12\x18\n" +
 	"\acommand\x18\x01 \x01(\tR\acommand\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12\x12\n" +
-	"\x04args\x18\x03 \x03(\fR\x04args\"\xd8\x01\n" +
+	"\x04args\x18\x03 \x03(\fR\x04args\"T\n" +
 	"\x0fCommandResponse\x12\x14\n" +
-	"\x05error\x18\x01 \x01(\tR\x05error\x12\x16\n" +
-	"\x05value\x18\x02 \x01(\fH\x00R\x05value\x12\x1a\n" +
-	"\asuccess\x18\x03 \x01(\bH\x00R\asuccess\x12\x16\n" +
-	"\x05count\x18\x04 \x01(\x03H\x00R\x05count\x12,\n" +
-	"\x04list\x18\x05 \x01(\v2\x16.commonpb.KeyValueListH\x00R\x04list\x12)\n" +
-	"\x03map\x18\x06 \x01(\v2\x15.commonpb.KeyValueMapH\x00R\x03mapB\n" +
-	"\n" +
-	"\bresponseB\x1eZ\x1cgokv/proto/commonpb;commonpbb\x06proto3"
+	"\x05error\x18\x01 \x01(\tR\x05error\x12+\n" +
+	"\bresponse\x18\x02 \x01(\v2\x0f.commonpb.ValueR\bresponseB\x1eZ\x1cgokv/proto/commonpb;commonpbb\x06proto3"
 
 var (
 	file_commonpb_common_proto_rawDescOnce sync.Once
@@ -411,24 +409,25 @@ func file_commonpb_common_proto_rawDescGZIP() []byte {
 
 var file_commonpb_common_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_commonpb_common_proto_goTypes = []any{
-	(*KeyValue)(nil),        // 0: commonpb.KeyValue
-	(*KeyValueList)(nil),    // 1: commonpb.KeyValueList
-	(*KeyValueMap)(nil),     // 2: commonpb.KeyValueMap
+	(*Value)(nil),           // 0: commonpb.Value
+	(*ListValue)(nil),       // 1: commonpb.ListValue
+	(*MapValue)(nil),        // 2: commonpb.MapValue
 	(*CommandRequest)(nil),  // 3: commonpb.CommandRequest
 	(*CommandResponse)(nil), // 4: commonpb.CommandResponse
-	nil,                     // 5: commonpb.KeyValueMap.DataEntry
+	nil,                     // 5: commonpb.MapValue.ValuesEntry
 }
 var file_commonpb_common_proto_depIdxs = []int32{
-	0, // 0: commonpb.KeyValueList.data:type_name -> commonpb.KeyValue
-	5, // 1: commonpb.KeyValueMap.data:type_name -> commonpb.KeyValueMap.DataEntry
-	1, // 2: commonpb.CommandResponse.list:type_name -> commonpb.KeyValueList
-	2, // 3: commonpb.CommandResponse.map:type_name -> commonpb.KeyValueMap
-	1, // 4: commonpb.KeyValueMap.DataEntry.value:type_name -> commonpb.KeyValueList
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	1, // 0: commonpb.Value.list:type_name -> commonpb.ListValue
+	2, // 1: commonpb.Value.map:type_name -> commonpb.MapValue
+	0, // 2: commonpb.ListValue.values:type_name -> commonpb.Value
+	5, // 3: commonpb.MapValue.values:type_name -> commonpb.MapValue.ValuesEntry
+	0, // 4: commonpb.CommandResponse.response:type_name -> commonpb.Value
+	0, // 5: commonpb.MapValue.ValuesEntry.value:type_name -> commonpb.Value
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_commonpb_common_proto_init() }
@@ -436,12 +435,13 @@ func file_commonpb_common_proto_init() {
 	if File_commonpb_common_proto != nil {
 		return
 	}
-	file_commonpb_common_proto_msgTypes[4].OneofWrappers = []any{
-		(*CommandResponse_Value)(nil),
-		(*CommandResponse_Success)(nil),
-		(*CommandResponse_Count)(nil),
-		(*CommandResponse_List)(nil),
-		(*CommandResponse_Map)(nil),
+	file_commonpb_common_proto_msgTypes[0].OneofWrappers = []any{
+		(*Value_Bytes)(nil),
+		(*Value_Str)(nil),
+		(*Value_Int)(nil),
+		(*Value_Bool)(nil),
+		(*Value_List)(nil),
+		(*Value_Map)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

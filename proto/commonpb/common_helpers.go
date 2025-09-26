@@ -1,0 +1,82 @@
+package commonpb
+
+func NewString(s string) *Value {
+	return &Value{Kind: &Value_Str{Str: s}}
+}
+
+func NewInt(i int64) *Value {
+	return &Value{Kind: &Value_Int{Int: i}}
+}
+
+func NewBool(b bool) *Value {
+	return &Value{Kind: &Value_Bool{Bool: b}}
+}
+
+func NewBytes(b []byte) *Value {
+	return &Value{Kind: &Value_Bytes{Bytes: b}}
+}
+
+func NewList(vals ...*Value) *Value {
+	return &Value{
+		Kind: &Value_List{
+			List: &ListValue{Values: vals},
+		},
+	}
+}
+
+func NewMap(m map[string]*Value) *Value {
+	return &Value{
+		Kind: &Value_Map{
+			Map: &MapValue{Values: m},
+		},
+	}
+}
+
+func NewCursor(cursor uint64, data *Value) *Value {
+	payload := make(map[string]*Value, 2)
+	payload["cursor"] = NewInt(int64(cursor))
+	payload["data"] = data
+	return NewMap(payload)
+}
+
+func (v *Value) AsString() (string, bool) {
+	if x, ok := v.Kind.(*Value_Str); ok {
+		return x.Str, true
+	}
+	return "", false
+}
+
+func (v *Value) AsInt() (int64, bool) {
+	if x, ok := v.Kind.(*Value_Int); ok {
+		return x.Int, true
+	}
+	return 0, false
+}
+
+func (v *Value) AsBool() (bool, bool) {
+	if x, ok := v.Kind.(*Value_Bool); ok {
+		return x.Bool, true
+	}
+	return false, false
+}
+
+func (v *Value) AsBytes() ([]byte, bool) {
+	if x, ok := v.Kind.(*Value_Bytes); ok {
+		return x.Bytes, true
+	}
+	return nil, false
+}
+
+func (v *Value) AsList() (*ListValue, bool) {
+	if x, ok := v.Kind.(*Value_List); ok {
+		return x.List, true
+	}
+	return nil, false
+}
+
+func (v *Value) AsMap() (*MapValue, bool) {
+	if x, ok := v.Kind.(*Value_Map); ok {
+		return x.Map, true
+	}
+	return nil, false
+}
