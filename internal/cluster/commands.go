@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"gokv/internal/hashmap"
-	"gokv/internal/hashring"
 	"gokv/proto/commonpb"
 )
 
@@ -28,22 +27,15 @@ func (cm *ClusterManager) HGet(hash string, args ...[]byte) (*commonpb.CommandRe
 		return nil, errors.New("hget: hash not found")
 	}
 
-	response := commonpb.CommandResponse{}
-	kvList := &commonpb.KeyValueList{
-		Data: make([]*commonpb.KeyValue, len(entries)),
-	}
+	data := make(map[string]*commonpb.Value, len(entries))
 
 	i := 0
 	for key, entry := range entries {
-		kv := &commonpb.KeyValue{
-			Key:   key,
-			Value: entry.Data,
-		}
-		kvList.Data[i] = kv
+		data[key] = commonpb.NewBytes(entry.Data)
 		i++
 	}
 
-	response.Response = &commonpb.CommandResponse_List{List: kvList}
+	response := commonpb.CommandResponse{Response: commonpb.NewMap(data)}
 	return &response, nil
 }
 
@@ -64,9 +56,7 @@ func (cm *ClusterManager) HSet(hash string, args ...[]byte) (*commonpb.CommandRe
 	}
 
 	cm.HashMap.Set(hash, key, data, ttl)
-	response := commonpb.CommandResponse{
-		Response: &commonpb.CommandResponse_Success{Success: true},
-	}
+	response := commonpb.CommandResponse{Response: commonpb.NewBool(true)}
 	return &response, nil
 }
 
@@ -83,9 +73,7 @@ func (cm *ClusterManager) HDel(hash string, args ...[]byte) (*commonpb.CommandRe
 
 	count := cm.HashMap.Del(hash, keys...)
 
-	response := commonpb.CommandResponse{
-		Response: &commonpb.CommandResponse_Count{Count: int64(count)},
-	}
+	response := commonpb.CommandResponse{Response: commonpb.NewInt(int64(count))}
 	return &response, nil
 }
 
@@ -112,49 +100,40 @@ func (cm *ClusterManager) HScan(cur string, args ...[]byte) (*commonpb.CommandRe
 		nextCursor = 0
 	}
 
-	response := commonpb.CommandResponse{}
-	kvMap := &commonpb.KeyValueMap{
-		Cursor: int64(nextCursor),
-		Data:   make(map[string]*commonpb.KeyValueList, 0),
-	}
+	data := make(map[string]*commonpb.Value)
 
 	cm.HashMap.Scan(cursor%cursorPerNode, func(hash string, he *hashmap.HashEntry) {
 		responsibleNodeIDs := cm.HashRing.Get(hash)
 		if responsibleNodeIDs[0] == cm.NodeID {
-			kvList := &commonpb.KeyValueList{
-				Data: make([]*commonpb.KeyValue, 0),
-			}
+			entryMap := make(map[string]*commonpb.Value)
 
 			he.Mu.RLock()
 			for key, entry := range he.Items {
-				kv := &commonpb.KeyValue{
-					Key:   key,
-					Value: entry.Data,
-				}
-				kvList.Data = append(kvList.Data, kv)
+				entryMap[key] = commonpb.NewBytes(entry.Data)
 			}
 			he.Mu.RUnlock()
 
-			kvMap.Data[hash] = kvList
+			data[hash] = commonpb.NewMap(entryMap)
 		}
 	})
 
-	response.Response = &commonpb.CommandResponse_Map{Map: kvMap}
+	cursorValue := commonpb.NewCursor(uint64(nextCursor), commonpb.NewMap(data))
+	response := commonpb.CommandResponse{Response: cursorValue}
 	return &response, err
 }
 
-// finds nodeID responsible for the cursor of the HSCAN command
-func (cm *ClusterManager) findCursorNode(req *commonpb.CommandRequest, hr *hashring.HashRing) (string, error) {
+// Finds nodeID responsible for the cursor of the HSCAN command
+func (cm *ClusterManager) findCursorNode(req *commonpb.CommandRequest) ([]string, error) {
 	cursor, err := strconv.Atoi(req.Key)
 	if err != nil {
-		return "", errors.New("hscan: cursor must be a integer")
+		return []string{}, errors.New("hscan: cursor must be a integer")
 	}
 
-	nodeIDs := hr.GetNodes()
+	nodeIDs := cm.HashRing.GetNodes()
 	cursorPerNode := int(math.Ceil(float64(cm.HashMap.ShardsCount) / float64(cm.HashMap.ShardsPerCursor)))
 	totalCursors := cursorPerNode * len(nodeIDs)
 	if cursor < 0 || cursor >= totalCursors {
-		return "", errors.New("hscan: invalid cursor")
+		return []string{}, errors.New("hscan: invalid cursor")
 	}
 
 	nextCursor := cursor + 1
@@ -162,5 +141,5 @@ func (cm *ClusterManager) findCursorNode(req *commonpb.CommandRequest, hr *hashr
 		nextCursor = 0
 	}
 
-	return nodeIDs[cursor/cursorPerNode], nil
+	return []string{nodeIDs[cursor/cursorPerNode]}, nil
 }

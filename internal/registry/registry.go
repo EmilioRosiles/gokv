@@ -3,14 +3,13 @@ package registry
 import (
 	"sync"
 
-	"gokv/internal/hashring"
 	"gokv/proto/commonpb"
 )
 
 type Command struct {
 	Run             func(key string, args ...[]byte) (*commonpb.CommandResponse, error)
 	Replicate       bool
-	ResponsibleFunc func(req *commonpb.CommandRequest, hr *hashring.HashRing) (string, error)
+	ResponsibleFunc func(req *commonpb.CommandRequest) ([]string, error)
 }
 
 // CommandRegistry stores and manages command handlers.

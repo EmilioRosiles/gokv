@@ -96,8 +96,8 @@ func (s *internalServer) ForwardCommand(ctx context.Context, req *commonpb.Comma
 	}
 
 	if cmd.ResponsibleFunc != nil {
-		if nodeID, err := cmd.ResponsibleFunc(req, s.cm.HashRing); err == nil {
-			responsibleNodeIDs = []string{nodeID}
+		if nodeIDs, err := cmd.ResponsibleFunc(req); err == nil {
+			responsibleNodeIDs = nodeIDs
 		}
 	}
 

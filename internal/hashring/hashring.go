@@ -26,17 +26,13 @@ type HashRing struct {
 }
 
 // Creates new hashring
-func New(vNodeCount int, replicas int, fn HashFunc) *HashRing {
-	h := &HashRing{
+func New(vNodeCount int, replicas int) *HashRing {
+	return &HashRing{
 		vNodeCount: vNodeCount,
 		Replicas:   replicas,
-		hash:       fn,
+		hash:       crc32.ChecksumIEEE,
 		hashMap:    make(map[int]string),
 	}
-	if h.hash == nil {
-		h.hash = crc32.ChecksumIEEE
-	}
-	return h
 }
 
 // Add node to hash ring
