@@ -42,7 +42,7 @@ type ClusterManager struct {
 // NewClusterManager creates and initializes a new ClusterManager.
 func NewClusterManager(env *environment.Environment, cfg *config.Config) *ClusterManager {
 	cr := registry.NewCommandRegistry()
-	hashMap := hashmap.NewHashMap(cfg.CleanupInterval, cfg.HashMap.Shards, cfg.HashMap.ShardsPerCursor)
+	hashMap := hashmap.NewHashMap(cfg.CleanupInterval, cfg.Shards, cfg.ShardsPerCursor)
 	peerMap := make(map[string]*peer.Peer)
 	hashRing := hashring.New(cfg.VNodeCount, cfg.Replicas)
 	connPool := pool.NewGrpcConnectionPool(func(address string) (*grpc.ClientConn, error) {
