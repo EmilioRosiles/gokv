@@ -13,6 +13,7 @@ import (
 	"gokv/internal/context/environment"
 	"gokv/internal/hashmap"
 	"gokv/internal/hashring"
+	"gokv/internal/listmap"
 	"gokv/internal/models/peer"
 	"gokv/internal/pool"
 	"gokv/internal/registry"
@@ -28,13 +29,14 @@ import (
 // ClusterManager manages the cluster state, including node information, peer list, data store, and hash ring.
 type ClusterManager struct {
 	Mu                 sync.RWMutex
-	NodeID             string                    // ID of the current node.
-	NodeInternalAddr   string                    // Address of the current node.
-	NodeExternalAddr   string                    //
-	PeerMap            map[string]*peer.Peer     // Map of nodes in the cluster.
-	HashRing           *hashring.HashRing        // Consistent hashing implementation.
-	ConnPool           *pool.GrpcConnectionPool  // Connection pool for gRPC clients.
-	HashMap            *hashmap.HashMap          // In-memory data store.
+	NodeID             string                   // ID of the current node.
+	NodeInternalAddr   string                   // Address of the current node.
+	NodeExternalAddr   string                   //
+	PeerMap            map[string]*peer.Peer    // Map of nodes in the cluster.
+	HashRing           *hashring.HashRing       // Consistent hashing implementation.
+	ConnPool           *pool.GrpcConnectionPool // Connection pool for gRPC clients.
+	HashMap            *hashmap.HashMap         // In-memory data store.
+	ListMap            *listmap.ListMap
 	CommandRegistry    *registry.CommandRegistry // Registry for supported commands.
 	LastRebalancedRing *hashring.HashRing        // Ring used for the last rebalance (avoids multiple reblance calls)
 }
@@ -43,6 +45,7 @@ type ClusterManager struct {
 func NewClusterManager(env *environment.Environment, cfg *config.Config) *ClusterManager {
 	cr := registry.NewCommandRegistry()
 	hashMap := hashmap.NewHashMap(cfg.CleanupInterval, cfg.Shards, cfg.ShardsPerCursor)
+	listMap := listmap.NewListMap(cfg.Shards, cfg.ShardsPerCursor)
 	peerMap := make(map[string]*peer.Peer)
 	hashRing := hashring.New(cfg.VNodeCount, cfg.Replicas)
 	connPool := pool.NewGrpcConnectionPool(func(address string) (*grpc.ClientConn, error) {
@@ -76,6 +79,7 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 		HashRing:         hashRing,
 		ConnPool:         connPool,
 		HashMap:          hashMap,
+		ListMap:          listMap,
 		CommandRegistry:  cr,
 	}
 
@@ -87,6 +91,14 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 	cr.Register("HSET", registry.Command{Run: cm.HSet, Replicate: true})
 	cr.Register("HDEL", registry.Command{Run: cm.HDel, Replicate: true})
 	cr.Register("HSCAN", registry.Command{Run: cm.HScan, ResponsibleFunc: cm.findCursorNode})
+
+	// Register ListMap commands.
+	cr.Register("LPUSH", registry.Command{Run: cm.LPush, Replicate: true})
+	cr.Register("LPOP", registry.Command{Run: cm.LPop, Replicate: true})
+	cr.Register("RPUSH", registry.Command{Run: cm.RPush, Replicate: true})
+	cr.Register("RPOP", registry.Command{Run: cm.RPop, Replicate: true})
+	cr.Register("LLEN", registry.Command{Run: cm.LLen})
+	cr.Register("LSCAN", registry.Command{Run: cm.LScan, ResponsibleFunc: cm.findCursorNode})
 
 	slog.Debug(fmt.Sprintf("cluster manager: created cluster manager for node: %s", cm.NodeID))
 	return cm

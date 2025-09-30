@@ -143,3 +143,88 @@ func (cm *ClusterManager) findCursorNode(req *commonpb.CommandRequest) ([]string
 
 	return []string{nodeIDs[cursor/cursorPerNode]}, nil
 }
+
+func (cm *ClusterManager) LPush(listName string, args ...[]byte) (*commonpb.CommandResponse, error) {
+	if listName == "" {
+		return nil, errors.New("lpush: requires 2 or more arguments: name, ...value")
+	}
+
+	cm.ListMap.PushFront(listName, args...)
+
+	response := commonpb.CommandResponse{Response: commonpb.NewBool(true)}
+	return &response, nil
+}
+
+func (cm *ClusterManager) LPop(listName string, args ...[]byte) (*commonpb.CommandResponse, error) {
+	if listName == "" || len(args) != 1 {
+		return nil, errors.New("lpop: requires 2 arguments: name, count")
+	}
+
+	count, err := strconv.Atoi(string(args[0]))
+	if err != nil {
+		return nil, fmt.Errorf("lpop: invalid count")
+	}
+
+	values, err := cm.ListMap.PopFront(listName, count)
+	if err != nil {
+		return nil, fmt.Errorf("lpop: list error %w", err)
+	}
+
+	data := make([]*commonpb.Value, len(values))
+	for i, value := range values {
+		data[i] = commonpb.NewBytes(value)
+	}
+
+	response := commonpb.CommandResponse{Response: commonpb.NewList(data...)}
+	return &response, nil
+}
+
+func (cm *ClusterManager) RPush(listName string, args ...[]byte) (*commonpb.CommandResponse, error) {
+	if listName == "" {
+		return nil, errors.New("rpush: requires 2 or more arguments: name, ...value")
+	}
+
+	cm.ListMap.PushBack(listName, args...)
+
+	response := commonpb.CommandResponse{Response: commonpb.NewBool(true)}
+	return &response, nil
+}
+
+func (cm *ClusterManager) RPop(listName string, args ...[]byte) (*commonpb.CommandResponse, error) {
+	if listName == "" || len(args) != 1 {
+		return nil, errors.New("rpop: requires 2 arguments: name, count")
+	}
+
+	count, err := strconv.Atoi(string(args[0]))
+	if err != nil {
+		return nil, fmt.Errorf("rpop: invalid count")
+	}
+
+	values, err := cm.ListMap.PopBack(listName, count)
+	if err != nil {
+		return nil, fmt.Errorf("rpop: list error, %w", err)
+	}
+
+	data := make([]*commonpb.Value, len(values))
+	for i, value := range values {
+		data[i] = commonpb.NewBytes(value)
+	}
+
+	response := commonpb.CommandResponse{Response: commonpb.NewList(data...)}
+	return &response, nil
+}
+
+func (cm *ClusterManager) LLen(listName string, args ...[]byte) (*commonpb.CommandResponse, error) {
+	if listName == "" {
+		return nil, errors.New("llen: requires 1 argument: name")
+	}
+
+	len := cm.ListMap.Length(listName)
+
+	response := commonpb.CommandResponse{Response: commonpb.NewInt(int64(len))}
+	return &response, nil
+}
+
+func (cm *ClusterManager) LScan(listName string, args ...[]byte) (*commonpb.CommandResponse, error) {
+	return nil, nil
+}

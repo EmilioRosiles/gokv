@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"time"
 
 	"gokv/internal/tls"
 	"gokv/proto/commonpb"
 	"gokv/proto/externalpb"
+
+	"encoding/json"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
@@ -95,7 +96,7 @@ var runCmd = &cobra.Command{
 			log.Fatalf("Error: %s", res.Error)
 		}
 
-		printValue(res.Response, 0)
+		printValue(res.Response)
 		fmt.Print("\n")
 	},
 }
@@ -130,54 +131,58 @@ func createConnection() (*grpc.ClientConn, error) {
 	)
 }
 
-func printValue(v *commonpb.Value, indent int) {
-	pad := func() { fmt.Print(strings.Repeat(" ", indent)) }
+func printValue(v *commonpb.Value) {
+	value, err := valueToInterface(v)
+	if err != nil {
+		log.Fatalf("Failed to convert value to interface: %v", err)
+	}
 
+	jsonValue, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		log.Fatalf("Failed to marshal json: %v", err)
+	}
+
+	fmt.Print(string(jsonValue))
+}
+
+func valueToInterface(v *commonpb.Value) (interface{}, error) {
 	switch x := v.Kind.(type) {
 	case *commonpb.Value_Str:
-		fmt.Printf("\"%q\"", x.Str)
+		return x.Str, nil
 
 	case *commonpb.Value_Int:
-		fmt.Printf("%d", x.Int)
+		return x.Int, nil
 
 	case *commonpb.Value_Bool:
-		fmt.Printf("%t", x.Bool)
+		return x.Bool, nil
 
 	case *commonpb.Value_Bytes:
-		fmt.Printf("\"%s\"", string(x.Bytes))
+		return string(x.Bytes), nil
 
 	case *commonpb.Value_List:
-		fmt.Println("[")
+		list := make([]interface{}, len(x.List.Values))
 		for i, elem := range x.List.Values {
-			pad()
-			printValue(elem, indent+2)
-			if i > 0 && i < len(x.List.Values)-1 {
-				fmt.Print(",")
+			var err error
+			list[i], err = valueToInterface(elem)
+			if err != nil {
+				return nil, err
 			}
-			fmt.Println()
 		}
-		fmt.Print("]")
+		return list, nil
 
 	case *commonpb.Value_Map:
-		fmt.Println("{")
-		n := len(x.Map.Values)
-		i := 0
+		dict := make(map[string]interface{})
 		for k, elem := range x.Map.Values {
-			pad()
-			fmt.Printf("  %q: ", k)
-			printValue(elem, indent+2)
-			i++
-			if i < n {
-				fmt.Print(",")
+			var err error
+			dict[k], err = valueToInterface(elem)
+			if err != nil {
+				return nil, err
 			}
-			fmt.Println()
 		}
-		pad()
-		fmt.Print("}")
+		return dict, nil
 
 	default:
-		fmt.Print("<unknown>")
-
+		return nil, fmt.Errorf("<unknown>")
 	}
 }
 
