@@ -11,12 +11,11 @@ import (
 
 	"gokv/internal/context/config"
 	"gokv/internal/context/environment"
-	"gokv/internal/hashmap"
 	"gokv/internal/hashring"
-	"gokv/internal/listmap"
 	"gokv/internal/models/peer"
 	"gokv/internal/pool"
 	"gokv/internal/registry"
+	"gokv/internal/storage"
 	"gokv/internal/tls"
 	"gokv/proto/commonpb"
 	"gokv/proto/internalpb"
@@ -29,14 +28,13 @@ import (
 // ClusterManager manages the cluster state, including node information, peer list, data store, and hash ring.
 type ClusterManager struct {
 	Mu                 sync.RWMutex
-	NodeID             string                   // ID of the current node.
-	NodeInternalAddr   string                   // Address of the current node.
-	NodeExternalAddr   string                   //
-	PeerMap            map[string]*peer.Peer    // Map of nodes in the cluster.
-	HashRing           *hashring.HashRing       // Consistent hashing implementation.
-	ConnPool           *pool.GrpcConnectionPool // Connection pool for gRPC clients.
-	HashMap            *hashmap.HashMap         // In-memory data store.
-	ListMap            *listmap.ListMap
+	NodeID             string                    // ID of the current node.
+	NodeInternalAddr   string                    // Address of the current node.
+	NodeExternalAddr   string                    //
+	PeerMap            map[string]*peer.Peer     // Map of nodes in the cluster.
+	HashRing           *hashring.HashRing        // Consistent hashing implementation.
+	ConnPool           *pool.GrpcConnectionPool  // Connection pool for gRPC clients.
+	DataStore          *storage.DataStore        // In-memory data store.
 	CommandRegistry    *registry.CommandRegistry // Registry for supported commands.
 	LastRebalancedRing *hashring.HashRing        // Ring used for the last rebalance (avoids multiple reblance calls)
 }
@@ -44,8 +42,7 @@ type ClusterManager struct {
 // NewClusterManager creates and initializes a new ClusterManager.
 func NewClusterManager(env *environment.Environment, cfg *config.Config) *ClusterManager {
 	cr := registry.NewCommandRegistry()
-	hashMap := hashmap.NewHashMap(cfg.CleanupInterval, cfg.Shards, cfg.ShardsPerCursor)
-	listMap := listmap.NewListMap(cfg.Shards, cfg.ShardsPerCursor)
+	ds := storage.NewDataStore(cfg.Shards, cfg.ShardsPerCursor, cfg.CleanupInterval)
 	peerMap := make(map[string]*peer.Peer)
 	hashRing := hashring.New(cfg.VNodeCount, cfg.Replicas)
 	connPool := pool.NewGrpcConnectionPool(func(address string) (*grpc.ClientConn, error) {
@@ -78,8 +75,7 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 		PeerMap:          peerMap,
 		HashRing:         hashRing,
 		ConnPool:         connPool,
-		HashMap:          hashMap,
-		ListMap:          listMap,
+		DataStore:        ds,
 		CommandRegistry:  cr,
 	}
 

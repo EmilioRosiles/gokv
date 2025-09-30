@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"slices"
 	"time"
 
 	"gokv/internal/hashmap"
@@ -121,28 +120,28 @@ func (cm *ClusterManager) Rebalance(oldRing, newRing *hashring.HashRing) {
 	commandsByNode := make(map[string][]*commonpb.CommandRequest)
 	deleteList := make([]string, 0)
 
-	cm.HashMap.Scan(-1, func(hash string, he *hashmap.HashEntry) {
-		oldResponsibleNodeIDs := oldRing.Get(hash)
-		newResponsibleNodeIDs := newRing.Get(hash)
+	// cm.HashMap.Scan(-1, func(hash string, he *hashmap.HashEntry) {
+	// 	oldResponsibleNodeIDs := oldRing.Get(hash)
+	// 	newResponsibleNodeIDs := newRing.Get(hash)
 
-		targetIDs := cm.getMigrationTargets(oldResponsibleNodeIDs, newResponsibleNodeIDs)
-		if len(targetIDs) == 0 {
-			return
-		}
+	// 	targetIDs := cm.getMigrationTargets(oldResponsibleNodeIDs, newResponsibleNodeIDs)
+	// 	if len(targetIDs) == 0 {
+	// 		return
+	// 	}
 
-		rebalanceLeader := cm.findMigrationLeader(oldResponsibleNodeIDs, newResponsibleNodeIDs)
+	// 	rebalanceLeader := cm.findMigrationLeader(oldResponsibleNodeIDs, newResponsibleNodeIDs)
 
-		if rebalanceLeader == cm.NodeID {
-			migrationCommands := cm.createMigrationCommands(hash, he, targetIDs)
-			for nodeID, commands := range migrationCommands {
-				commandsByNode[nodeID] = append(commandsByNode[nodeID], commands...)
-			}
-		}
+	// 	if rebalanceLeader == cm.NodeID {
+	// 		migrationCommands := cm.createMigrationCommands(hash, he, targetIDs)
+	// 		for nodeID, commands := range migrationCommands {
+	// 			commandsByNode[nodeID] = append(commandsByNode[nodeID], commands...)
+	// 		}
+	// 	}
 
-		if !slices.Contains(newResponsibleNodeIDs, cm.NodeID) {
-			deleteList = append(deleteList, hash)
-		}
-	})
+	// 	if !slices.Contains(newResponsibleNodeIDs, cm.NodeID) {
+	// 		deleteList = append(deleteList, hash)
+	// 	}
+	// })
 
 	for nodeID, commands := range commandsByNode {
 		if peer, ok := cm.GetPeer(nodeID); ok {
