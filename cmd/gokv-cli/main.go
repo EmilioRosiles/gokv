@@ -156,6 +156,9 @@ func valueToInterface(v *commonpb.Value) (interface{}, error) {
 	case *commonpb.Value_Bool:
 		return x.Bool, nil
 
+	case *commonpb.Value_Nil:
+		return nil, nil
+
 	case *commonpb.Value_Bytes:
 		return string(x.Bytes), nil
 

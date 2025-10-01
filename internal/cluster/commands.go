@@ -5,10 +5,51 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"time"
 
 	"gokv/internal/storage"
 	"gokv/proto/commonpb"
 )
+
+// Del removes a key from the DataStore.
+func (cm *ClusterManager) Del(key string, args ...[]byte) (*commonpb.CommandResponse, error) {
+	if key == "" || len(args) > 0 {
+		return nil, errors.New("DEL: requires 1 argument: key")
+	}
+
+	count := 0
+	_, ok := cm.DataStore.Get(key)
+	if ok {
+		cm.DataStore.Del(key)
+		count = 1
+	}
+
+	response := commonpb.CommandResponse{Response: commonpb.NewInt(int64(count))}
+	return &response, nil
+}
+
+// Expire adds expiration time to a key from the DataStore.
+func (cm *ClusterManager) Expire(key string, args ...[]byte) (*commonpb.CommandResponse, error) {
+	if key == "" || len(args) != 1 {
+		return nil, errors.New("EXPIRE: requires 2 arguments: key, ttl")
+	}
+
+	store, ok := cm.DataStore.Get(key)
+	if !ok {
+		response := commonpb.CommandResponse{Response: commonpb.NewBool(false)}
+		return &response, nil
+	}
+
+	ttl, err := time.ParseDuration(string(args[0]))
+	if err != nil || ttl < 0 {
+		return nil, fmt.Errorf("EXPIRE: invalid TTL")
+	}
+
+	store.SetTtl(ttl)
+
+	response := commonpb.CommandResponse{Response: commonpb.NewBool(true)}
+	return &response, nil
+}
 
 // Scan scans cluster keys at the specific cursor.
 func (cm *ClusterManager) Scan(cur string, args ...[]byte) (*commonpb.CommandResponse, error) {
@@ -77,7 +118,8 @@ func (cm *ClusterManager) HGet(hash string, args ...[]byte) (*commonpb.CommandRe
 
 	store, ok := cm.DataStore.Get(hash)
 	if !ok {
-		return nil, errors.New("HGET: hash not found")
+		response := commonpb.CommandResponse{Response: commonpb.NewNil()}
+		return &response, nil
 	}
 
 	if store.Type() != storage.Hash {
@@ -111,7 +153,8 @@ func (cm *ClusterManager) HSet(hash string, args ...[]byte) (*commonpb.CommandRe
 
 	store, ok := cm.DataStore.Get(hash)
 	if !ok {
-		return nil, errors.New("HSET: hash not found")
+		store = storage.NewHash()
+		cm.DataStore.Set(hash, store)
 	}
 
 	if store.Type() != storage.Hash {
@@ -131,7 +174,7 @@ func (cm *ClusterManager) HSet(hash string, args ...[]byte) (*commonpb.CommandRe
 	return &response, nil
 }
 
-// HDel deletes one or more fields from a hash. If no args are passed, it deletes the entire hash.
+// HDel deletes one or more fields from a hash.
 func (cm *ClusterManager) HDel(hash string, args ...[]byte) (*commonpb.CommandResponse, error) {
 	if hash == "" || len(args) != 0 {
 		return nil, errors.New("HDEL: requires 2 or more arguments: hash, field [field ...]")
@@ -139,7 +182,8 @@ func (cm *ClusterManager) HDel(hash string, args ...[]byte) (*commonpb.CommandRe
 
 	store, ok := cm.DataStore.Get(hash)
 	if !ok {
-		return nil, errors.New("HDEL: hash not found")
+		response := commonpb.CommandResponse{Response: commonpb.NewInt(0)}
+		return &response, nil
 	}
 
 	if store.Type() != storage.Hash {
@@ -152,8 +196,37 @@ func (cm *ClusterManager) HDel(hash string, args ...[]byte) (*commonpb.CommandRe
 	}
 
 	count := store.(*storage.HashMap).Del(keys...)
+	if store.(*storage.HashMap).Len() == 0 {
+		cm.DataStore.Del(hash)
+	}
 
 	response := commonpb.CommandResponse{Response: commonpb.NewInt(int64(count))}
+	return &response, nil
+}
+
+// HKeys returns all the field keys in a hash.
+func (cm *ClusterManager) HKeys(hash string, args ...[]byte) (*commonpb.CommandResponse, error) {
+	if hash == "" || len(args) != 0 {
+		return nil, errors.New("HKEYS: requires 1 argument: hash")
+	}
+
+	store, ok := cm.DataStore.Get(hash)
+	if !ok {
+		response := commonpb.CommandResponse{Response: commonpb.NewNil()}
+		return &response, nil
+	}
+
+	if store.Type() != storage.Hash {
+		return nil, errors.New("HKEYS: invalid data structure found")
+	}
+
+	keys := store.(*storage.HashMap).Keys()
+	data := make([]*commonpb.Value, len(keys))
+	for i, key := range keys {
+		data[i] = commonpb.NewString(key)
+	}
+
+	response := commonpb.CommandResponse{Response: commonpb.NewList(data...)}
 	return &response, nil
 }
 
@@ -164,7 +237,8 @@ func (cm *ClusterManager) LPush(listName string, args ...[]byte) (*commonpb.Comm
 
 	store, ok := cm.DataStore.Get(listName)
 	if !ok {
-		return nil, errors.New("LPUSH: list not found")
+		store = storage.NewList()
+		cm.DataStore.Set(listName, store)
 	}
 
 	if store.Type() != storage.List {
@@ -189,7 +263,8 @@ func (cm *ClusterManager) LPop(listName string, args ...[]byte) (*commonpb.Comma
 
 	store, ok := cm.DataStore.Get(listName)
 	if !ok {
-		return nil, errors.New("LPUSH: list not found")
+		response := commonpb.CommandResponse{Response: commonpb.NewNil()}
+		return &response, nil
 	}
 
 	if store.Type() != storage.List {
@@ -197,8 +272,8 @@ func (cm *ClusterManager) LPop(listName string, args ...[]byte) (*commonpb.Comma
 	}
 
 	values := store.(*storage.ListMap).PopFront(count)
-	if err != nil {
-		return nil, fmt.Errorf("LPOP: list error %w", err)
+	if store.(*storage.ListMap).Len() == 0 {
+		cm.DataStore.Del(listName)
 	}
 
 	data := make([]*commonpb.Value, len(values))
@@ -217,7 +292,8 @@ func (cm *ClusterManager) RPush(listName string, args ...[]byte) (*commonpb.Comm
 
 	store, ok := cm.DataStore.Get(listName)
 	if !ok {
-		return nil, errors.New("RPUSH: list not found")
+		store = storage.NewList()
+		cm.DataStore.Set(listName, store)
 	}
 
 	if store.Type() != storage.List {
@@ -242,7 +318,8 @@ func (cm *ClusterManager) RPop(listName string, args ...[]byte) (*commonpb.Comma
 
 	store, ok := cm.DataStore.Get(listName)
 	if !ok {
-		return nil, errors.New("RPOP: list not found")
+		response := commonpb.CommandResponse{Response: commonpb.NewNil()}
+		return &response, nil
 	}
 
 	if store.Type() != storage.List {
@@ -250,8 +327,8 @@ func (cm *ClusterManager) RPop(listName string, args ...[]byte) (*commonpb.Comma
 	}
 
 	values := store.(*storage.ListMap).PopBack(count)
-	if err != nil {
-		return nil, fmt.Errorf("RPOP: list error %w", err)
+	if store.(*storage.ListMap).Len() == 0 {
+		cm.DataStore.Del(listName)
 	}
 
 	data := make([]*commonpb.Value, len(values))
@@ -270,7 +347,8 @@ func (cm *ClusterManager) LLen(listName string, args ...[]byte) (*commonpb.Comma
 
 	store, ok := cm.DataStore.Get(listName)
 	if !ok {
-		return nil, errors.New("LLEN: list not found")
+		response := commonpb.CommandResponse{Response: commonpb.NewInt(0)}
+		return &response, nil
 	}
 
 	if store.Type() != storage.List {

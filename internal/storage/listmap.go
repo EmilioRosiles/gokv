@@ -3,6 +3,7 @@ package storage
 import (
 	"container/list"
 	"sync"
+	"time"
 )
 
 // List represents a list data structure, implementing Storable.
@@ -34,6 +35,12 @@ func (lm *ListMap) ExpiresAt() int64 {
 	lm.mu.RLock()
 	defer lm.mu.RUnlock()
 	return lm.expiresAt
+}
+
+func (lm *ListMap) SetTtl(ttl time.Duration) {
+	lm.mu.Lock()
+	defer lm.mu.Unlock()
+	lm.expiresAt = time.Now().Add(ttl).Unix()
 }
 
 // PushFront adds values to the front of the list.

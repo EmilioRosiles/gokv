@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
-	"gokv/internal/hashmap"
 	"gokv/internal/hashring"
 	"gokv/proto/commonpb"
 	"gokv/proto/internalpb"
@@ -49,38 +47,38 @@ func (cm *ClusterManager) findMigrationLeader(oldResponsibleNodeIDs, newResponsi
 	return newResponsibleNodeIDs[0]
 }
 
-// Creates migration commands for HSET and groups them by target node.
-func (cm *ClusterManager) createMigrationCommands(hash string, he *hashmap.HashEntry, targetIDs []string) map[string][]*commonpb.CommandRequest {
-	commandsByNode := make(map[string][]*commonpb.CommandRequest)
-	he.Mu.RLock()
-	defer he.Mu.RUnlock()
+// // Creates migration commands for HSET and groups them by target node.
+// func (cm *ClusterManager) createMigrationCommands(hash string, he *hashmap.HashEntry, targetIDs []string) map[string][]*commonpb.CommandRequest {
+// 	commandsByNode := make(map[string][]*commonpb.CommandRequest)
+// 	he.Mu.RLock()
+// 	defer he.Mu.RUnlock()
 
-	for key, entry := range he.Items {
-		ttl := int64(0)
-		if entry.ExpiresAt > 0 {
-			ttl = entry.ExpiresAt - time.Now().Unix()
-		}
+// 	for key, entry := range he.Items {
+// 		ttl := int64(0)
+// 		if entry.ExpiresAt > 0 {
+// 			ttl = entry.ExpiresAt - time.Now().Unix()
+// 		}
 
-		args := make([][]byte, 0)
-		args = append(args, []byte(key))
-		args = append(args, entry.Data)
-		args = append(args, fmt.Appendf(nil, "%d", ttl))
+// 		args := make([][]byte, 0)
+// 		args = append(args, []byte(key))
+// 		args = append(args, entry.Data)
+// 		args = append(args, fmt.Appendf(nil, "%d", ttl))
 
-		req := &commonpb.CommandRequest{
-			Command: "HSET",
-			Key:     hash,
-			Args:    args,
-		}
+// 		req := &commonpb.CommandRequest{
+// 			Command: "HSET",
+// 			Key:     hash,
+// 			Args:    args,
+// 		}
 
-		for _, nodeID := range targetIDs {
-			if nodeID != cm.NodeID {
-				commandsByNode[nodeID] = append(commandsByNode[nodeID], req)
-			}
-		}
-	}
+// 		for _, nodeID := range targetIDs {
+// 			if nodeID != cm.NodeID {
+// 				commandsByNode[nodeID] = append(commandsByNode[nodeID], req)
+// 			}
+// 		}
+// 	}
 
-	return commandsByNode
-}
+// 	return commandsByNode
+// }
 
 // Batch streams commands to new owners
 func (cm *ClusterManager) streamMigrationCommands(nodeID string, commands []*commonpb.CommandRequest) {

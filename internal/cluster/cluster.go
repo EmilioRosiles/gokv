@@ -82,11 +82,16 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 	cm.HashRing.Add(cm.NodeID)
 	cm.LastRebalancedRing = cm.HashRing.Copy()
 
+	// Register general commands
+	cr.Register("DEL", registry.Command{Run: cm.Del, Replicate: true})
+	cr.Register("EXPIRE", registry.Command{Run: cm.Expire, Replicate: true})
+	cr.Register("SCAN", registry.Command{Run: cm.Scan, ResponsibleFunc: cm.findCursorNode})
+
 	// Register HashMap commands.
 	cr.Register("HGET", registry.Command{Run: cm.HGet})
 	cr.Register("HSET", registry.Command{Run: cm.HSet, Replicate: true})
 	cr.Register("HDEL", registry.Command{Run: cm.HDel, Replicate: true})
-	cr.Register("HSCAN", registry.Command{Run: cm.HScan, ResponsibleFunc: cm.findCursorNode})
+	cr.Register("HKEYS", registry.Command{Run: cm.HKeys})
 
 	// Register ListMap commands.
 	cr.Register("LPUSH", registry.Command{Run: cm.LPush, Replicate: true})
@@ -94,7 +99,6 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 	cr.Register("RPUSH", registry.Command{Run: cm.RPush, Replicate: true})
 	cr.Register("RPOP", registry.Command{Run: cm.RPop, Replicate: true})
 	cr.Register("LLEN", registry.Command{Run: cm.LLen})
-	cr.Register("LSCAN", registry.Command{Run: cm.LScan, ResponsibleFunc: cm.findCursorNode})
 
 	slog.Debug(fmt.Sprintf("cluster manager: created cluster manager for node: %s", cm.NodeID))
 	return cm
@@ -244,7 +248,6 @@ func (cm *ClusterManager) ForwardCommand(ctx context.Context, req *commonpb.Comm
 func (cm *ClusterManager) ReplicateCommand(req *commonpb.CommandRequest) {
 	responsibleNodeIDs := cm.HashRing.Get(req.Key)
 	ctx := context.Background()
-	slog.Debug(fmt.Sprintf("cluster manager: replicating to nodes %v commnad: %s %s", responsibleNodeIDs, req.Command, req.Key))
 	for _, replicaID := range responsibleNodeIDs[1:] {
 		if replicaID == cm.NodeID {
 			cm.RunCommand(ctx, req)

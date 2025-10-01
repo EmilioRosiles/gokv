@@ -12,6 +12,7 @@ message Value {
     bool bool = 4;
     ListValue list = 5;
     MapValue map = 6;
+    bool nil = 7;
   }
 }
 

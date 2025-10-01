@@ -27,6 +27,7 @@ type Storable interface {
 	Type() StorageType
 	Mu() *sync.RWMutex
 	ExpiresAt() int64
+	SetTtl(ttl time.Duration)
 }
 
 type shard struct {
@@ -168,8 +169,8 @@ func (ds *DataStore) deleteExpired() {
 		shard := ds.shards[i]
 		shard.mu.Lock()
 		for key, storable := range shard.data {
-			storable.Mu().Lock()
 			expiresAt := storable.ExpiresAt()
+			storable.Mu().Lock()
 			if expiresAt != 0 && now > expiresAt {
 				delete(shard.data, key)
 			}

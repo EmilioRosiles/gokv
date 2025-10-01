@@ -42,6 +42,12 @@ func (h *HashMap) ExpiresAt() int64 {
 	return h.expiresAt
 }
 
+func (h *HashMap) SetTtl(ttl time.Duration) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.expiresAt = time.Now().Add(ttl).Unix()
+}
+
 // Get retrieves fields from the hash.
 func (h *HashMap) Get(keys ...string) map[string]*FieldEntry {
 	h.mu.RLock()
