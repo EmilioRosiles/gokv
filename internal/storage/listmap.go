@@ -10,13 +10,13 @@ import (
 type ListMap struct {
 	Concurrent
 	Transient
-	items *list.List
+	Items *list.List
 }
 
 // NewList creates a new List.
 func NewList() *ListMap {
 	return &ListMap{
-		items: list.New(),
+		Items: list.New(),
 	}
 }
 
@@ -48,7 +48,7 @@ func (lm *ListMap) PushFront(values ...[]byte) {
 	lm.mu.Lock()
 	defer lm.mu.Unlock()
 	for _, value := range values {
-		lm.items.PushFront(value)
+		lm.Items.PushFront(value)
 	}
 }
 
@@ -57,7 +57,7 @@ func (lm *ListMap) PushBack(values ...[]byte) {
 	lm.mu.Lock()
 	defer lm.mu.Unlock()
 	for _, value := range values {
-		lm.items.PushBack(value)
+		lm.Items.PushBack(value)
 	}
 }
 
@@ -67,10 +67,10 @@ func (lm *ListMap) PopFront(count int) [][]byte {
 	defer lm.mu.Unlock()
 
 	var values [][]byte
-	for i := 0; i < count && lm.items.Len() > 0; i++ {
-		element := lm.items.Front()
+	for i := 0; i < count && lm.Items.Len() > 0; i++ {
+		element := lm.Items.Front()
 		values = append(values, element.Value.([]byte))
-		lm.items.Remove(element)
+		lm.Items.Remove(element)
 	}
 	return values
 }
@@ -81,10 +81,10 @@ func (lm *ListMap) PopBack(count int) [][]byte {
 	defer lm.mu.Unlock()
 
 	var values [][]byte
-	for i := 0; i < count && lm.items.Len() > 0; i++ {
-		element := lm.items.Back()
+	for i := 0; i < count && lm.Items.Len() > 0; i++ {
+		element := lm.Items.Back()
 		values = append(values, element.Value.([]byte))
-		lm.items.Remove(element)
+		lm.Items.Remove(element)
 	}
 	return values
 }
@@ -93,5 +93,5 @@ func (lm *ListMap) PopBack(count int) [][]byte {
 func (lm *ListMap) Len() int {
 	lm.mu.RLock()
 	defer lm.mu.RUnlock()
-	return lm.items.Len()
+	return lm.Items.Len()
 }

@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
+	"time"
 
 	"gokv/internal/hashring"
+	"gokv/internal/storage"
 	"gokv/proto/commonpb"
 	"gokv/proto/internalpb"
 )
@@ -47,38 +50,76 @@ func (cm *ClusterManager) findMigrationLeader(oldResponsibleNodeIDs, newResponsi
 	return newResponsibleNodeIDs[0]
 }
 
+func (cm *ClusterManager) createHashCommand(hash string, store *storage.HashMap) *commonpb.CommandRequest {
+	args := make([][]byte, store.Len()*2)
+
+	i := 0
+	for key, entry := range store.Items {
+		args[i] = []byte(key)
+		args[i+1] = entry.Data
+		i += 2
+	}
+
+	return &commonpb.CommandRequest{
+		Command: "HSET",
+		Key:     hash,
+		Args:    args,
+	}
+}
+
+func (cm *ClusterManager) createListCommand(listName string, store *storage.ListMap) *commonpb.CommandRequest {
+	args := make([][]byte, store.Len())
+
+	i := 0
+	for e := store.Items.Front(); e != nil; e = e.Next() {
+		args[i] = e.Value.([]byte)
+		i++
+	}
+
+	return &commonpb.CommandRequest{
+		Command: "RPUSH",
+		Key:     listName,
+		Args:    args,
+	}
+}
+
 // // Creates migration commands for HSET and groups them by target node.
-// func (cm *ClusterManager) createMigrationCommands(hash string, he *hashmap.HashEntry, targetIDs []string) map[string][]*commonpb.CommandRequest {
-// 	commandsByNode := make(map[string][]*commonpb.CommandRequest)
-// 	he.Mu.RLock()
-// 	defer he.Mu.RUnlock()
+func (cm *ClusterManager) createMigrationCommands(key string, store storage.Storable, targetIDs []string) map[string][]*commonpb.CommandRequest {
+	commandsByNode := make(map[string][]*commonpb.CommandRequest)
+	now := time.Now().Unix()
+	expiresAt := store.ExpiresAt()
 
-// 	for key, entry := range he.Items {
-// 		ttl := int64(0)
-// 		if entry.ExpiresAt > 0 {
-// 			ttl = entry.ExpiresAt - time.Now().Unix()
-// 		}
+	store.Mu().RLock()
+	defer store.Mu().RUnlock()
 
-// 		args := make([][]byte, 0)
-// 		args = append(args, []byte(key))
-// 		args = append(args, entry.Data)
-// 		args = append(args, fmt.Appendf(nil, "%d", ttl))
+	var cmd *commonpb.CommandRequest
+	switch s := store.(type) {
+	case *storage.HashMap:
+		cmd = cm.createHashCommand(key, s)
+	case *storage.ListMap:
+		cmd = cm.createListCommand(key, s)
+	default:
+		return commandsByNode
+	}
 
-// 		req := &commonpb.CommandRequest{
-// 			Command: "HSET",
-// 			Key:     hash,
-// 			Args:    args,
-// 		}
+	for _, nodeID := range targetIDs {
+		if nodeID != cm.NodeID {
+			commandsByNode[nodeID] = append(commandsByNode[nodeID], cmd)
 
-// 		for _, nodeID := range targetIDs {
-// 			if nodeID != cm.NodeID {
-// 				commandsByNode[nodeID] = append(commandsByNode[nodeID], req)
-// 			}
-// 		}
-// 	}
+			if expiresAt != 0 && now > expiresAt {
+				ttl := time.Duration(expiresAt - time.Now().Unix())
+				expCmd := &commonpb.CommandRequest{
+					Command: "EXPIRE",
+					Key:     key,
+					Args:    [][]byte{[]byte(ttl.String())},
+				}
+				commandsByNode[nodeID] = append(commandsByNode[nodeID], expCmd)
+			}
+		}
+	}
 
-// 	return commandsByNode
-// }
+	return commandsByNode
+}
 
 // Batch streams commands to new owners
 func (cm *ClusterManager) streamMigrationCommands(nodeID string, commands []*commonpb.CommandRequest) {
@@ -118,28 +159,28 @@ func (cm *ClusterManager) Rebalance(oldRing, newRing *hashring.HashRing) {
 	commandsByNode := make(map[string][]*commonpb.CommandRequest)
 	deleteList := make([]string, 0)
 
-	// cm.HashMap.Scan(-1, func(hash string, he *hashmap.HashEntry) {
-	// 	oldResponsibleNodeIDs := oldRing.Get(hash)
-	// 	newResponsibleNodeIDs := newRing.Get(hash)
+	cm.DataStore.Scan(-1, func(key string, store storage.Storable) {
+		oldResponsibleNodeIDs := oldRing.Get(key)
+		newResponsibleNodeIDs := newRing.Get(key)
 
-	// 	targetIDs := cm.getMigrationTargets(oldResponsibleNodeIDs, newResponsibleNodeIDs)
-	// 	if len(targetIDs) == 0 {
-	// 		return
-	// 	}
+		targetIDs := cm.getMigrationTargets(oldResponsibleNodeIDs, newResponsibleNodeIDs)
+		if len(targetIDs) == 0 {
+			return
+		}
 
-	// 	rebalanceLeader := cm.findMigrationLeader(oldResponsibleNodeIDs, newResponsibleNodeIDs)
+		rebalanceLeader := cm.findMigrationLeader(oldResponsibleNodeIDs, newResponsibleNodeIDs)
 
-	// 	if rebalanceLeader == cm.NodeID {
-	// 		migrationCommands := cm.createMigrationCommands(hash, he, targetIDs)
-	// 		for nodeID, commands := range migrationCommands {
-	// 			commandsByNode[nodeID] = append(commandsByNode[nodeID], commands...)
-	// 		}
-	// 	}
+		if rebalanceLeader == cm.NodeID {
+			migrationCommands := cm.createMigrationCommands(key, store, targetIDs)
+			for nodeID, commands := range migrationCommands {
+				commandsByNode[nodeID] = append(commandsByNode[nodeID], commands...)
+			}
+		}
 
-	// 	if !slices.Contains(newResponsibleNodeIDs, cm.NodeID) {
-	// 		deleteList = append(deleteList, hash)
-	// 	}
-	// })
+		if !slices.Contains(newResponsibleNodeIDs, cm.NodeID) {
+			deleteList = append(deleteList, key)
+		}
+	})
 
 	for nodeID, commands := range commandsByNode {
 		if peer, ok := cm.GetPeer(nodeID); ok {
@@ -148,8 +189,8 @@ func (cm *ClusterManager) Rebalance(oldRing, newRing *hashring.HashRing) {
 		}
 	}
 
-	for _, hash := range deleteList {
-		cm.HDel(hash)
+	for _, key := range deleteList {
+		cm.DataStore.Del(key)
 	}
 
 	slog.Debug("cluster manager: rebalancing finished")

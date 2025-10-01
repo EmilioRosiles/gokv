@@ -15,13 +15,13 @@ type FieldEntry struct {
 type HashMap struct {
 	Concurrent
 	Transient
-	items map[string]*FieldEntry
+	Items map[string]*FieldEntry
 }
 
 // NewHash creates a new Hash.
 func NewHash() *HashMap {
 	return &HashMap{
-		items: make(map[string]*FieldEntry),
+		Items: make(map[string]*FieldEntry),
 	}
 }
 
@@ -60,7 +60,7 @@ func (h *HashMap) Get(keys ...string) map[string]*FieldEntry {
 	}
 
 	for _, key := range keys {
-		entry, ok := h.items[key]
+		entry, ok := h.Items[key]
 		if !ok {
 			continue
 		}
@@ -73,7 +73,7 @@ func (h *HashMap) Get(keys ...string) map[string]*FieldEntry {
 // Set adds or updates a field in the hash.
 func (h *HashMap) Set(entries map[string]*FieldEntry) {
 	h.mu.Lock()
-	maps.Copy(h.items, entries)
+	maps.Copy(h.Items, entries)
 	h.mu.Unlock()
 }
 
@@ -84,8 +84,8 @@ func (h *HashMap) Del(keys ...string) int {
 
 	deletedCount := 0
 	for _, key := range keys {
-		if _, ok := h.items[key]; ok {
-			delete(h.items, key)
+		if _, ok := h.Items[key]; ok {
+			delete(h.Items, key)
 			deletedCount++
 		}
 	}
@@ -96,16 +96,16 @@ func (h *HashMap) Del(keys ...string) int {
 func (h *HashMap) Len() int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	return len(h.items)
+	return len(h.Items)
 }
 
 // Keys returns the list of keys stored in the hash.
 func (h *HashMap) Keys() []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	keys := make([]string, len(h.items))
+	keys := make([]string, len(h.Items))
 	i := 0
-	for key := range h.items {
+	for key := range h.Items {
 		keys[i] = key
 		i++
 	}
