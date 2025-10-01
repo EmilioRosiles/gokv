@@ -23,7 +23,7 @@ services:
     ports:
       - "50051:50051"
     environment:
-      GOKV_LOG_LEVEL: "debug"
+      GOKV_LOG_LEVEL: "info"
       GOKV_CONFIG_PATH: "/app/config.yaml"
       
       GOKV_CLUSTER_NODE_ID: "gokv1"
@@ -50,7 +50,7 @@ services:
     ports:
       - "50052:50051"
     environment:
-      GOKV_LOG_LEVEL: "debug"
+      GOKV_LOG_LEVEL: "info"
       GOKV_CONFIG_PATH: "/app/config.yaml"
       
       GOKV_CLUSTER_NODE_ID: "gokv2"
@@ -80,7 +80,7 @@ services:
     ports:
       - "50053:50051"
     environment:
-      GOKV_LOG_LEVEL: "debug"
+      GOKV_LOG_LEVEL: "info"
       GOKV_CONFIG_PATH: "/app/config.yaml"
       
       GOKV_CLUSTER_NODE_ID: "gokv3"

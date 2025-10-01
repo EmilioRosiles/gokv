@@ -150,7 +150,6 @@ func (cm *ClusterManager) RemoveNode(nodeID string) {
 	if peer, ok := cm.PeerMap[nodeID]; ok {
 		cm.ConnPool.Close(peer.NodeInternalAddr)
 		cm.PeerMap[nodeID].Alive = false
-		cm.PeerMap[nodeID].LastSeen = time.Now()
 		cm.HashRing.Remove(nodeID)
 		slog.Warn(fmt.Sprintf("cluster manager: removed peer from cluster: %s", nodeID))
 	}
