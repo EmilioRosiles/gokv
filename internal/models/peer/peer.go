@@ -1,9 +1,10 @@
 package peer
 
 import (
+	"time"
+
 	"gokv/proto/externalpb"
 	"gokv/proto/internalpb"
-	"time"
 )
 
 type Peer struct {
