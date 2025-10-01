@@ -106,8 +106,8 @@ func (cm *ClusterManager) createMigrationCommands(key string, store storage.Stor
 		if nodeID != cm.NodeID {
 			commandsByNode[nodeID] = append(commandsByNode[nodeID], cmd)
 
-			if expiresAt != 0 && now > expiresAt {
-				ttl := time.Duration(expiresAt - time.Now().Unix())
+			if expiresAt != 0 && now < expiresAt {
+				ttl := time.Until(time.Unix(expiresAt, 0))
 				expCmd := &commonpb.CommandRequest{
 					Command: "EXPIRE",
 					Key:     key,
