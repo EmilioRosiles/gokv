@@ -16,6 +16,10 @@ func NewBytes(b []byte) *Value {
 	return &Value{Kind: &Value_Bytes{Bytes: b}}
 }
 
+func NewNil() *Value {
+	return &Value{Kind: &Value_Nil{Nil: true}}
+}
+
 func NewList(vals ...*Value) *Value {
 	return &Value{
 		Kind: &Value_List{
@@ -65,6 +69,11 @@ func (v *Value) AsBytes() ([]byte, bool) {
 		return x.Bytes, true
 	}
 	return nil, false
+}
+
+func (v *Value) AsNil() bool {
+	_, ok := v.Kind.(*Value_Nil)
+	return ok
 }
 
 func (v *Value) AsList() (*ListValue, bool) {

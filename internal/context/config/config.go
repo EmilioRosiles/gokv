@@ -11,11 +11,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type HashMapConfig struct {
-	Shards          int `yaml:"shards"`
-	ShardsPerCursor int `yaml:"shards_per_cursor"`
-}
-
 type Config struct {
 	CleanupInterval   time.Duration `yaml:"cleanup_interval"`
 	HeartbeatInterval time.Duration `yaml:"heartbeat_interval"`
@@ -23,7 +18,8 @@ type Config struct {
 	VNodeCount        int           `yaml:"v_node_count"`
 	MessageTimeout    time.Duration `yaml:"message_timeout"`
 	Replicas          int           `yaml:"replicas"`
-	HashMap           HashMapConfig `yaml:"hashmap"`
+	Shards            int           `yaml:"shard_count"`
+	ShardsPerCursor   int           `yaml:"shards_per_cursor"`
 }
 
 func Default() *Config {
@@ -34,10 +30,8 @@ func Default() *Config {
 		VNodeCount:        3,
 		MessageTimeout:    1 * time.Second,
 		Replicas:          2,
-		HashMap: HashMapConfig{
-			Shards:          512,
-			ShardsPerCursor: 128,
-		},
+		Shards:            512,
+		ShardsPerCursor:   128,
 	}
 }
 
@@ -61,8 +55,6 @@ func LoadConfig(env *environment.Environment) *Config {
 	} else {
 		slog.Debug("config: no config path provided, using default configuration")
 	}
-
-	slog.Info(fmt.Sprintf("configs: %v", config))
 
 	return config
 }

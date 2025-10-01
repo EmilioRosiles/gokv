@@ -31,6 +31,7 @@ type Value struct {
 	//	*Value_Bool
 	//	*Value_List
 	//	*Value_Map
+	//	*Value_Nil
 	Kind          isValue_Kind `protobuf_oneof:"kind"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -127,6 +128,15 @@ func (x *Value) GetMap() *MapValue {
 	return nil
 }
 
+func (x *Value) GetNil() bool {
+	if x != nil {
+		if x, ok := x.Kind.(*Value_Nil); ok {
+			return x.Nil
+		}
+	}
+	return false
+}
+
 type isValue_Kind interface {
 	isValue_Kind()
 }
@@ -155,6 +165,10 @@ type Value_Map struct {
 	Map *MapValue `protobuf:"bytes,6,opt,name=map,proto3,oneof"`
 }
 
+type Value_Nil struct {
+	Nil bool `protobuf:"varint,7,opt,name=nil,proto3,oneof"`
+}
+
 func (*Value_Bytes) isValue_Kind() {}
 
 func (*Value_Str) isValue_Kind() {}
@@ -166,6 +180,8 @@ func (*Value_Bool) isValue_Kind() {}
 func (*Value_List) isValue_Kind() {}
 
 func (*Value_Map) isValue_Kind() {}
+
+func (*Value_Nil) isValue_Kind() {}
 
 type ListValue struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -371,14 +387,15 @@ var File_commonpb_common_proto protoreflect.FileDescriptor
 
 const file_commonpb_common_proto_rawDesc = "" +
 	"\n" +
-	"\x15commonpb/common.proto\x12\bcommonpb\"\xb8\x01\n" +
+	"\x15commonpb/common.proto\x12\bcommonpb\"\xcc\x01\n" +
 	"\x05Value\x12\x16\n" +
 	"\x05bytes\x18\x01 \x01(\fH\x00R\x05bytes\x12\x12\n" +
 	"\x03str\x18\x02 \x01(\tH\x00R\x03str\x12\x12\n" +
 	"\x03int\x18\x03 \x01(\x03H\x00R\x03int\x12\x14\n" +
 	"\x04bool\x18\x04 \x01(\bH\x00R\x04bool\x12)\n" +
 	"\x04list\x18\x05 \x01(\v2\x13.commonpb.ListValueH\x00R\x04list\x12&\n" +
-	"\x03map\x18\x06 \x01(\v2\x12.commonpb.MapValueH\x00R\x03mapB\x06\n" +
+	"\x03map\x18\x06 \x01(\v2\x12.commonpb.MapValueH\x00R\x03map\x12\x12\n" +
+	"\x03nil\x18\a \x01(\bH\x00R\x03nilB\x06\n" +
 	"\x04kind\"4\n" +
 	"\tListValue\x12'\n" +
 	"\x06values\x18\x01 \x03(\v2\x0f.commonpb.ValueR\x06values\"\x8e\x01\n" +
@@ -442,6 +459,7 @@ func file_commonpb_common_proto_init() {
 		(*Value_Bool)(nil),
 		(*Value_List)(nil),
 		(*Value_Map)(nil),
+		(*Value_Nil)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

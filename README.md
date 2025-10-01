@@ -46,21 +46,38 @@ A command-line interface (CLI) tool is available for interacting with the cluste
 **Usage:**
 
 ```bash
-./gokv-cli <commnad> <gokv-command> [arguments]
+./gokv-cli <commnad> [...arguments]
 ```
 
 **Example:**
 
 ```bash
 ./gokv-cli status
-./gokv-cli run HSET myhash mykey myvalue 10s
+./gokv-cli run HSET hash key1 value1 key2 value2 
 ```
 
 **GOKV Available Commands:**
 
-*   `HGET <key> <field>`: Get the a hash or field/s in a hash.
-*   `HSET <key> <field> <value> [ttl]`: Set the value of a field in a hash. `ttl` is an optional duration (e.g., `10s`, `1m`).
-*   `HDEL <key> <field>`: Delete a hash or field/s from a hash.
+### General Commands
+
+*   `DEL <key>`: Deletes a key.
+*   `EXPIRE <key> <ttl>`: Sets an expiration time on a key. `ttl` is a duration (e.g., `10s`, `1m`).
+*   `SCAN <cursor>`: Scans all keys in the cluster.
+
+### Hash Commands
+
+*   `HGET <key> <field...>`: Get one or more fields in a hash.
+*   `HSET <key> <field> <value>...`: Set one or more fields in a hash.
+*   `HDEL <key> <field...>`: Delete one or more fields from a hash.
+*   `HKEYS <key>`: Get all the fields in a hash.
+
+### List Commands
+
+*   `LPUSH <key> <value...>`: Prepend one or more values to a list.
+*   `LPOP <key> <count>`: Remove and get the first `count` elements from a list.
+*   `RPUSH <key> <value...>`: Append one or more values to a list.
+*   `RPOP <key> <count>`: Remove and get the last `count` elements from a list.
+*   `LLEN <key>`: Get the length of a list.
 
 ### Running with TLS (Optional)
 
@@ -90,6 +107,13 @@ To run the cluster with TLS encryption, you need to generate certificates and co
     *   `GOKV_EXTERNAL_TLS_SERVER_KEY_PATH`: Path to the TLS key for external communication.
 
     You can set these variables in a `.env` file or directly in the `docker-compose.yml` file.
+
+## Data Structures
+
+`gokv` supports the following data structures:
+
+*   **Hashes**: A collection of field-value pairs.
+*   **Lists**: A list of elements, ordered by insertion time.
 
 ## Configuration
 
@@ -214,4 +238,4 @@ Write commands (e.g. `HSET`, `HDEL`) are replicated to other nodes (n non virtua
 
 ### Data Rebalancing
 
-When the cluster state changes each node will trigger a rebalance. As a result, some keys that were previously assigned to other nodes are now assigned to the new node. The nodes that are no longer responsible for these keys will send them to the new node. This is done using the `StreamCommand` gRPC endpoint.
+When the cluster state changes each node will trigger a rebalance. As a result, some keys that were previously assigned to other nodes are now assigned to the new node. A node from the previous responsible nodes will be selected for rebalancing the keys, keys that no longer belong to the current node will be deleted once the rebalance is completed. This is done using the `Rebalance` gRPC internal endpoint.

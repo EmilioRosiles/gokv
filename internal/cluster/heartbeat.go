@@ -83,12 +83,8 @@ func (cm *ClusterManager) MergeState(nodes []*internalpb.HeartbeatNode) {
 		localNode, exists := cm.GetPeer(remoteNode.NodeId)
 
 		if !exists {
-			cm.AddNode(remoteNode.NodeId, remoteNode.NodeInternalAddr, remoteNode.NodeExternalAddr)
-			if peer, ok := cm.GetPeer(remoteNode.NodeId); ok {
-				cm.Mu.Lock()
-				peer.Alive = remoteNode.Alive
-				peer.LastSeen = time.Unix(remoteNode.LastSeen, 0)
-				cm.Mu.Unlock()
+			if remoteNode.Alive {
+				cm.AddNode(remoteNode.NodeId, remoteNode.NodeInternalAddr, remoteNode.NodeExternalAddr)
 			}
 			continue
 		}
