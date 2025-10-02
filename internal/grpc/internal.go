@@ -121,7 +121,7 @@ func (s *internalServer) ForwardCommand(ctx context.Context, req *commonpb.Comma
 	}
 
 	if err != nil {
-		return &commonpb.CommandResponse{Error: err.Error()}, nil
+		return nil, err
 	}
 
 	return res, nil

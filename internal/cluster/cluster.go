@@ -19,6 +19,7 @@ import (
 	"gokv/internal/tls"
 	"gokv/proto/internalpb"
 
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -72,6 +73,10 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 		return grpc.NewClient(address,
 			grpc.WithTransportCredentials(creds),
 			grpc.WithConnectParams(grpc.ConnectParams{MinConnectTimeout: cfg.MessageTimeout}),
+			grpc.WithUnaryInterceptor(retry.UnaryClientInterceptor(
+				retry.WithMax(uint(cfg.MessageRetry)),
+				retry.WithPerRetryTimeout(cfg.MessageTimeout)),
+			),
 		)
 	})
 

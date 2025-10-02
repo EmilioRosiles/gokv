@@ -18,16 +18,18 @@ type Config struct {
 	VNodeCount        int           `yaml:"v_node_count"`
 	MessageTimeout    time.Duration `yaml:"message_timeout"`
 	Replicas          int           `yaml:"replicas"`
+	MessageRetry      int           `yaml:"message_retry"`
 }
 
 func Default() *Config {
 	return &Config{
 		CleanupInterval:   10 * time.Second,
-		HeartbeatInterval: 5 * time.Second,
+		HeartbeatInterval: 3 * time.Second,
 		GossipPeerCount:   2,
 		VNodeCount:        100,
 		MessageTimeout:    1 * time.Second,
 		Replicas:          2,
+		MessageRetry:      3,
 	}
 }
 

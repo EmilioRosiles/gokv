@@ -1,6 +1,7 @@
 cleanup_interval: 10s
-heartbeat_interval: 5s
+heartbeat_interval: 3s
 gossip_peer_count: 2
 v_node_count: 100
-message_timeout: 2s
+message_timeout: 1s
+message_retry: 3
 replicas: 2
