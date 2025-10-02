@@ -163,7 +163,7 @@ func (cm *ClusterManager) Rebalance(oldRing, newRing *hashring.HashRing) {
 	commandsByNode := make(map[string][]*commonpb.CommandRequest)
 	deleteList := make([]string, 0)
 
-	cm.DataStore.Scan(-1, func(key string, store storage.Storable) {
+	cm.DataStore.Scan(-1, 0, func(key string, store storage.Storable) {
 		oldResponsibleNodeIDs := oldRing.Get(key)
 		newResponsibleNodeIDs := newRing.Get(key)
 

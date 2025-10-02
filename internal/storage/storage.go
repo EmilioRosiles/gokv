@@ -127,10 +127,10 @@ func (ds *DataStore) Del(key string) {
 }
 
 // Scan iterates over all keys in a specific cursor range and calls the callback.
-func (ds *DataStore) Scan(cursor int, callback func(key string, val Storable)) {
+func (ds *DataStore) Scan(cursor, count int, callback func(key string, val Storable)) {
 	now := time.Now().Unix()
-	start := 0
-	end := int(ds.ShardsCount)
+	start := cursor
+	end := cursor + count
 
 	if cursor == -1 {
 		start = 0
