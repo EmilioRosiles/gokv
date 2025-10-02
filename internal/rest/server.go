@@ -21,9 +21,16 @@ func StartRESTServer(env *environment.Environment, cm *cluster.ClusterManager) {
 	smux := http.NewServeMux()
 	smux.HandleFunc("/command", commandHandler(cm))
 
-	slog.Info(fmt.Sprintf("REST: starting on %s", env.ExternalRestBindAddr))
-	if err := http.ListenAndServe(env.ExternalRestBindAddr, smux); err != nil {
-		slog.Error(fmt.Sprintf("REST: could not start listening: %v", err))
+	if env.ExternalTlsServerCertPath != "" || env.ExternalTlsServerKeyPath != "" {
+		slog.Info(fmt.Sprintf("REST: starting with TLS on %s", env.ExternalRestBindAddr))
+		if err := http.ListenAndServeTLS(env.ExternalRestBindAddr, env.ExternalTlsServerCertPath, env.ExternalTlsServerKeyPath, smux); err != nil {
+			slog.Error(fmt.Sprintf("REST: could not start listening with TLS: %v", err))
+		}
+	} else {
+		slog.Info(fmt.Sprintf("REST: starting on %s", env.ExternalRestBindAddr))
+		if err := http.ListenAndServe(env.ExternalRestBindAddr, smux); err != nil {
+			slog.Error(fmt.Sprintf("REST: could not start listening: %v", err))
+		}
 	}
 }
 
@@ -67,6 +74,11 @@ func commandHandler(cm *cluster.ClusterManager) http.HandlerFunc {
 			Key:     key,
 			Args:    args,
 		})
+
+		if resp.Error != "" {
+			http.Error(w, resp.Error, http.StatusBadRequest)
+			return
+		}
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
