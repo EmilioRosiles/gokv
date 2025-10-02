@@ -7,6 +7,7 @@ Gokv is a distributed in-memory key-value store written in Go. It is designed to
 *   [Quickstart](#quickstart)
 *   [Configuration](#configuration)
 *   [gRPC API](#grpc-api)
+*   [REST API](#rest-api)
 *   [Architecture](#architecture)
 
 ## Quickstart
@@ -37,7 +38,7 @@ Gokv is a distributed in-memory key-value store written in Go. It is designed to
 
 ### Interacting with the cluster
 
-You can interact with the cluster by connecting to any of the nodes. For example, to connect to the first node and set a key, you can use a gRPC client or the CLI tool.
+You can interact with the cluster by connecting to any of the nodes. For example, to connect to the first node and set a key, you can use a gRPC client, the REST API, or the CLI tool.
 
 #### CLI Tool
 
@@ -55,8 +56,6 @@ A command-line interface (CLI) tool is available for interacting with the cluste
 ./gokv-cli status
 ./gokv-cli run HSET hash key1 value1 key2 value2 
 ```
-
-**GOKV Available Commands:**
 
 ### General Commands
 
@@ -217,6 +216,28 @@ protoc --proto_path=proto \
   externalpb/external.proto
 
 ```
+
+## REST API
+
+The REST API allows you to interact with the cluster using HTTP requests. By default, the REST API is available on port `8080`.
+
+### Endpoints
+
+*   `POST /command`: Executes a command in the cluster.
+
+    **Request Body:**
+
+    ```json
+    {
+        "command": "<command> <key> [args...]"
+    }
+    ```
+
+    **Example:**
+
+    ```bash
+    curl -X POST -d '{"command": "HSET myhash key1 value1"}' http://localhost:8080/command
+    ```
 
 ## Architecture
 
