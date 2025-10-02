@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"gokv/internal/context/config"
-	"gokv/internal/models/peer"
 	"gokv/proto/internalpb"
 )
 
@@ -29,7 +28,7 @@ func (cm *ClusterManager) StartHeartbeat(cfg *config.Config) {
 }
 
 // Heartbeat sends a heartbeat to a list of peers to sync cluster state.
-func (cm *ClusterManager) Heartbeat(peerList ...*peer.Peer) {
+func (cm *ClusterManager) Heartbeat(peerList ...*Peer) {
 	if len(peerList) == 0 {
 		slog.Debug("cluster manager: skipping heartbeat, no peers found")
 		return
@@ -55,7 +54,13 @@ func (cm *ClusterManager) Heartbeat(peerList ...*peer.Peer) {
 		peerspb := make([]*internalpb.HeartbeatNode, 0, len(cm.PeerMap)+1)
 		peerspb = append(peerspb, self)
 		for _, peerToAdd := range cm.PeerMap {
-			peerspb = append(peerspb, peer.ToHeartbeatNodeProto(*peerToAdd))
+			peerspb = append(peerspb, &internalpb.HeartbeatNode{
+				NodeId:           peerToAdd.NodeID,
+				NodeInternalAddr: peerToAdd.NodeInternalAddr,
+				NodeExternalAddr: peerToAdd.NodeExternalAddr,
+				Alive:            peerToAdd.Alive,
+				LastSeen:         peerToAdd.LastSeen.Unix(),
+			})
 		}
 		cm.Mu.RUnlock()
 

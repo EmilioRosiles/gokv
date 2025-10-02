@@ -83,7 +83,7 @@ func (cm *ClusterManager) createListCommand(listName string, store *storage.List
 	}
 }
 
-// // Creates migration commands for HSET and groups them by target node.
+// Creates migration commands for DataStore and groups them by target node.
 func (cm *ClusterManager) createMigrationCommands(key string, store storage.Storable, targetIDs []string) map[string][]*commonpb.CommandRequest {
 	commandsByNode := make(map[string][]*commonpb.CommandRequest)
 	now := time.Now().Unix()
@@ -102,17 +102,21 @@ func (cm *ClusterManager) createMigrationCommands(key string, store storage.Stor
 		return commandsByNode
 	}
 
+	var expCmd *commonpb.CommandRequest
+	if expiresAt != 0 && now < expiresAt {
+		ttl := time.Until(time.Unix(expiresAt, 0))
+		expCmd = &commonpb.CommandRequest{
+			Command: "EXPIRE",
+			Key:     key,
+			Args:    [][]byte{[]byte(ttl.String())},
+		}
+	}
+
 	for _, nodeID := range targetIDs {
 		if nodeID != cm.NodeID {
 			commandsByNode[nodeID] = append(commandsByNode[nodeID], cmd)
 
-			if expiresAt != 0 && now < expiresAt {
-				ttl := time.Until(time.Unix(expiresAt, 0))
-				expCmd := &commonpb.CommandRequest{
-					Command: "EXPIRE",
-					Key:     key,
-					Args:    [][]byte{[]byte(ttl.String())},
-				}
+			if expCmd != nil {
 				commandsByNode[nodeID] = append(commandsByNode[nodeID], expCmd)
 			}
 		}

@@ -12,7 +12,6 @@ import (
 
 	"gokv/internal/cluster"
 	"gokv/internal/context/environment"
-	"gokv/internal/models/peer"
 	"gokv/internal/tls"
 	"gokv/proto/commonpb"
 	"gokv/proto/internalpb"
@@ -75,11 +74,23 @@ func (s *internalServer) Heartbeat(ctx context.Context, req *internalpb.Heartbea
 	}
 
 	s.cm.Mu.RLock()
-	self := &internalpb.HeartbeatNode{NodeId: s.cm.NodeID, NodeInternalAddr: s.cm.NodeInternalAddr, NodeExternalAddr: s.cm.NodeExternalAddr, Alive: true, LastSeen: time.Now().Unix()}
+	self := &internalpb.HeartbeatNode{
+		NodeId:           s.cm.NodeID,
+		NodeInternalAddr: s.cm.NodeInternalAddr,
+		NodeExternalAddr: s.cm.NodeExternalAddr,
+		Alive:            true,
+		LastSeen:         time.Now().Unix(),
+	}
 	peerspb := make([]*internalpb.HeartbeatNode, 0, len(s.cm.PeerMap)+1)
 	peerspb = append(peerspb, self)
 	for _, peerToAdd := range s.cm.PeerMap {
-		peerspb = append(peerspb, peer.ToHeartbeatNodeProto(*peerToAdd))
+		peerspb = append(peerspb, &internalpb.HeartbeatNode{
+			NodeId:           peerToAdd.NodeID,
+			NodeInternalAddr: peerToAdd.NodeInternalAddr,
+			NodeExternalAddr: peerToAdd.NodeExternalAddr,
+			Alive:            peerToAdd.Alive,
+			LastSeen:         peerToAdd.LastSeen.Unix(),
+		})
 	}
 	s.cm.Mu.RUnlock()
 	return &internalpb.HeartbeatResponse{Peers: peerspb}, nil
@@ -96,7 +107,7 @@ func (s *internalServer) ForwardCommand(ctx context.Context, req *commonpb.Comma
 	}
 
 	if cmd.ResponsibleFunc != nil {
-		if nodeIDs, err := cmd.ResponsibleFunc(req); err == nil {
+		if nodeIDs, err := cmd.ResponsibleFunc(req.Key); err == nil {
 			responsibleNodeIDs = nodeIDs
 		}
 	}
@@ -104,7 +115,7 @@ func (s *internalServer) ForwardCommand(ctx context.Context, req *commonpb.Comma
 	var res *commonpb.CommandResponse
 	var err error
 	if slices.Contains(responsibleNodeIDs, s.cm.NodeID) {
-		res, err = s.cm.RunCommand(ctx, req)
+		res, err = s.cm.RunLocalCommand(ctx, req)
 	} else {
 		err = fmt.Errorf("node %s not responsible for forwarded command %s %s", req.Command, s.cm.NodeID, req.Key)
 	}
@@ -136,7 +147,7 @@ func (s *internalServer) Rebalance(stream internalpb.InternalServer_RebalanceSer
 		for _, command := range req.Commands {
 			responsibleNodeIDs := s.cm.HashRing.Get(command.Key)
 			if slices.Contains(responsibleNodeIDs, s.cm.NodeID) {
-				_, err = s.cm.RunCommand(ctx, command)
+				_, err = s.cm.RunLocalCommand(ctx, command)
 			} else {
 				err = fmt.Errorf("node %v not responsible for command %s %s", s.cm.NodeID, command.Command, command.Key)
 			}

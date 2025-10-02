@@ -132,7 +132,7 @@ func createConnection() (*grpc.ClientConn, error) {
 }
 
 func printValue(v *commonpb.Value) {
-	value, err := valueToInterface(v)
+	value, err := commonpb.ValueToInterface(v)
 	if err != nil {
 		log.Fatalf("Failed to convert value to interface: %v", err)
 	}
@@ -143,50 +143,6 @@ func printValue(v *commonpb.Value) {
 	}
 
 	fmt.Print(string(jsonValue))
-}
-
-func valueToInterface(v *commonpb.Value) (interface{}, error) {
-	switch x := v.Kind.(type) {
-	case *commonpb.Value_Str:
-		return x.Str, nil
-
-	case *commonpb.Value_Int:
-		return x.Int, nil
-
-	case *commonpb.Value_Bool:
-		return x.Bool, nil
-
-	case *commonpb.Value_Nil:
-		return nil, nil
-
-	case *commonpb.Value_Bytes:
-		return string(x.Bytes), nil
-
-	case *commonpb.Value_List:
-		list := make([]interface{}, len(x.List.Values))
-		for i, elem := range x.List.Values {
-			var err error
-			list[i], err = valueToInterface(elem)
-			if err != nil {
-				return nil, err
-			}
-		}
-		return list, nil
-
-	case *commonpb.Value_Map:
-		dict := make(map[string]interface{})
-		for k, elem := range x.Map.Values {
-			var err error
-			dict[k], err = valueToInterface(elem)
-			if err != nil {
-				return nil, err
-			}
-		}
-		return dict, nil
-
-	default:
-		return nil, fmt.Errorf("<unknown>")
-	}
 }
 
 func main() {
