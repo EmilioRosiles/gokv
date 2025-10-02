@@ -78,7 +78,7 @@ func (cm *ClusterManager) Scan(cursorStr string, args ...[]byte) (*commonpb.Comm
 		nextCursor = 0
 		nextNodeIdx += 1
 		if nextNodeIdx >= len(cm.HashRing.GetNodes()) {
-			nextCursor = 0
+			nextNodeIdx = 0
 		}
 	}
 

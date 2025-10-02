@@ -13,13 +13,15 @@ func (cm *ClusterManager) RunCommand(ctx context.Context, req *commonpb.CommandR
 	responsibleNodeIDs := cm.HashRing.Get(req.Key)
 	cmd, ok := cm.CommandRegistry.Get(req.Command)
 	if !ok {
-		return nil, fmt.Errorf("unknown command: %s", req.Command)
+		return &commonpb.CommandResponse{Error: fmt.Sprintf("unknown command: %s", req.Command)}, nil
 	}
 
 	if cmd.ResponsibleFunc != nil {
-		if nodeIDs, err := cmd.ResponsibleFunc(req.Key); err == nil {
-			responsibleNodeIDs = nodeIDs
+		nodeIDs, err := cmd.ResponsibleFunc(req.Key)
+		if err != nil {
+			return &commonpb.CommandResponse{Error: err.Error()}, nil
 		}
+		responsibleNodeIDs = nodeIDs
 	}
 
 	var res *commonpb.CommandResponse
