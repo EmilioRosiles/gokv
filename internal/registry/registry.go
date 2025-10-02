@@ -9,7 +9,7 @@ import (
 type Command struct {
 	Run             func(key string, args ...[]byte) (*commonpb.CommandResponse, error)
 	Replicate       bool
-	ResponsibleFunc func(req *commonpb.CommandRequest) ([]string, error)
+	ResponsibleFunc func(key string) ([]string, error)
 }
 
 // CommandRegistry stores and manages command handlers.

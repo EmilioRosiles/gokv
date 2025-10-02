@@ -220,7 +220,7 @@ func (cm *ClusterManager) GetRandomAlivePeers(num int) []*peer.Peer {
 }
 
 // Runs a command locally, does not check for responsibility.
-func (cm *ClusterManager) RunCommand(ctx context.Context, req *commonpb.CommandRequest) (*commonpb.CommandResponse, error) {
+func (cm *ClusterManager) RunLocalCommand(ctx context.Context, req *commonpb.CommandRequest) (*commonpb.CommandResponse, error) {
 	cmd, ok := cm.CommandRegistry.Get(req.Command)
 	if !ok {
 		return nil, fmt.Errorf("unknown command: %s", req.Command)

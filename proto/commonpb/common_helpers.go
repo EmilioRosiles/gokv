@@ -1,5 +1,7 @@
 package commonpb
 
+import "fmt"
+
 func NewString(s string) *Value {
 	return &Value{Kind: &Value_Str{Str: s}}
 }
@@ -88,4 +90,48 @@ func (v *Value) AsMap() (*MapValue, bool) {
 		return x.Map, true
 	}
 	return nil, false
+}
+
+func ValueToInterface(v *Value) (any, error) {
+	switch x := v.Kind.(type) {
+	case *Value_Str:
+		return x.Str, nil
+
+	case *Value_Int:
+		return x.Int, nil
+
+	case *Value_Bool:
+		return x.Bool, nil
+
+	case *Value_Nil:
+		return nil, nil
+
+	case *Value_Bytes:
+		return string(x.Bytes), nil
+
+	case *Value_List:
+		list := make([]any, len(x.List.Values))
+		for i, elem := range x.List.Values {
+			var err error
+			list[i], err = ValueToInterface(elem)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return list, nil
+
+	case *Value_Map:
+		dict := make(map[string]any)
+		for k, elem := range x.Map.Values {
+			var err error
+			dict[k], err = ValueToInterface(elem)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return dict, nil
+
+	default:
+		return nil, fmt.Errorf("<unknown>")
+	}
 }

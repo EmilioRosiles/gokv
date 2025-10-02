@@ -96,7 +96,7 @@ func (s *internalServer) ForwardCommand(ctx context.Context, req *commonpb.Comma
 	}
 
 	if cmd.ResponsibleFunc != nil {
-		if nodeIDs, err := cmd.ResponsibleFunc(req); err == nil {
+		if nodeIDs, err := cmd.ResponsibleFunc(req.Key); err == nil {
 			responsibleNodeIDs = nodeIDs
 		}
 	}
@@ -104,7 +104,7 @@ func (s *internalServer) ForwardCommand(ctx context.Context, req *commonpb.Comma
 	var res *commonpb.CommandResponse
 	var err error
 	if slices.Contains(responsibleNodeIDs, s.cm.NodeID) {
-		res, err = s.cm.RunCommand(ctx, req)
+		res, err = s.cm.RunLocalCommand(ctx, req)
 	} else {
 		err = fmt.Errorf("node %s not responsible for forwarded command %s %s", req.Command, s.cm.NodeID, req.Key)
 	}
@@ -136,7 +136,7 @@ func (s *internalServer) Rebalance(stream internalpb.InternalServer_RebalanceSer
 		for _, command := range req.Commands {
 			responsibleNodeIDs := s.cm.HashRing.Get(command.Key)
 			if slices.Contains(responsibleNodeIDs, s.cm.NodeID) {
-				_, err = s.cm.RunCommand(ctx, command)
+				_, err = s.cm.RunLocalCommand(ctx, command)
 			} else {
 				err = fmt.Errorf("node %v not responsible for command %s %s", s.cm.NodeID, command.Command, command.Key)
 			}

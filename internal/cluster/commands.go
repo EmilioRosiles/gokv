@@ -89,8 +89,8 @@ func (cm *ClusterManager) Scan(cur string, args ...[]byte) (*commonpb.CommandRes
 }
 
 // Finds nodeID responsible for the cursor of the SCAN command
-func (cm *ClusterManager) findCursorNode(req *commonpb.CommandRequest) ([]string, error) {
-	cursor, err := strconv.Atoi(req.Key)
+func (cm *ClusterManager) findCursorNode(key string) ([]string, error) {
+	cursor, err := strconv.Atoi(key)
 	if err != nil {
 		return []string{}, errors.New("HSCAN: cursor must be a integer")
 	}

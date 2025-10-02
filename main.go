@@ -11,6 +11,7 @@ import (
 	"gokv/internal/context/config"
 	"gokv/internal/context/environment"
 	"gokv/internal/grpc"
+	"gokv/internal/rest"
 )
 
 // main is the entry point of the gokv application.
@@ -30,6 +31,7 @@ func main() {
 	// Start the gRPC internal and external servers.
 	go grpc.StartInternalServer(env, cm)
 	go grpc.StartExternalServer(env, cm)
+	go rest.StartRESTServer(env, cm)
 
 	// If seed nodes are provided, add it to the cluster, send heartbeat, and trigger initial rebalance.
 	if len(env.ClusterSeeds) > 0 {
