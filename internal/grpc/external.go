@@ -62,7 +62,23 @@ func StartExternalServer(env *environment.Environment, cm *cluster.ClusterManage
 // Healthcheck request returns the cluster status.
 func (s *externalServer) Healthcheck(ctx context.Context, req *externalpb.HealthcheckRequest) (*externalpb.HealthcheckResponse, error) {
 	slog.Debug("gRPC external: received healthcheck")
-	return s.cm.GetHealth(ctx, req), nil
+	s.cm.Mu.RLock()
+	self := &externalpb.HealthcheckNode{
+		NodeId:   s.cm.NodeID,
+		NodeAddr: s.cm.NodeExternalAddr,
+		Alive:    true,
+	}
+	peerspb := make([]*externalpb.HealthcheckNode, 0, len(s.cm.PeerMap)+1)
+	peerspb = append(peerspb, self)
+	for _, peerToAdd := range s.cm.PeerMap {
+		peerspb = append(peerspb, &externalpb.HealthcheckNode{
+			NodeId:   peerToAdd.NodeID,
+			NodeAddr: peerToAdd.NodeExternalAddr,
+			Alive:    peerToAdd.Alive,
+		})
+	}
+	s.cm.Mu.RUnlock()
+	return &externalpb.HealthcheckResponse{Peers: peerspb}, nil
 }
 
 // RunCommand handles incoming command requests from clients.

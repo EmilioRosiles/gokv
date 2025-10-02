@@ -12,7 +12,6 @@ import (
 
 	"gokv/internal/cluster"
 	"gokv/internal/context/environment"
-	"gokv/internal/models/peer"
 	"gokv/internal/tls"
 	"gokv/proto/commonpb"
 	"gokv/proto/internalpb"
@@ -75,11 +74,23 @@ func (s *internalServer) Heartbeat(ctx context.Context, req *internalpb.Heartbea
 	}
 
 	s.cm.Mu.RLock()
-	self := &internalpb.HeartbeatNode{NodeId: s.cm.NodeID, NodeInternalAddr: s.cm.NodeInternalAddr, NodeExternalAddr: s.cm.NodeExternalAddr, Alive: true, LastSeen: time.Now().Unix()}
+	self := &internalpb.HeartbeatNode{
+		NodeId:           s.cm.NodeID,
+		NodeInternalAddr: s.cm.NodeInternalAddr,
+		NodeExternalAddr: s.cm.NodeExternalAddr,
+		Alive:            true,
+		LastSeen:         time.Now().Unix(),
+	}
 	peerspb := make([]*internalpb.HeartbeatNode, 0, len(s.cm.PeerMap)+1)
 	peerspb = append(peerspb, self)
 	for _, peerToAdd := range s.cm.PeerMap {
-		peerspb = append(peerspb, peer.ToHeartbeatNodeProto(*peerToAdd))
+		peerspb = append(peerspb, &internalpb.HeartbeatNode{
+			NodeId:           peerToAdd.NodeID,
+			NodeInternalAddr: peerToAdd.NodeInternalAddr,
+			NodeExternalAddr: peerToAdd.NodeExternalAddr,
+			Alive:            peerToAdd.Alive,
+			LastSeen:         peerToAdd.LastSeen.Unix(),
+		})
 	}
 	s.cm.Mu.RUnlock()
 	return &internalpb.HeartbeatResponse{Peers: peerspb}, nil

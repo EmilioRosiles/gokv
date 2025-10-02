@@ -11,7 +11,6 @@ import (
 	"gokv/internal/cluster"
 	"gokv/internal/context/environment"
 	"gokv/proto/commonpb"
-	"gokv/proto/externalpb"
 )
 
 type CommandRequest struct {
@@ -20,31 +19,11 @@ type CommandRequest struct {
 
 func StartRESTServer(env *environment.Environment, cm *cluster.ClusterManager) {
 	smux := http.NewServeMux()
-	smux.HandleFunc("/status", healthcheckHandler(cm))
-	smux.HandleFunc("/{command}", commandHandler(cm))
+	smux.HandleFunc("/command", commandHandler(cm))
 
 	slog.Info(fmt.Sprintf("REST: starting on %s", env.ExternalRestBindAddr))
 	if err := http.ListenAndServe(env.ExternalRestBindAddr, smux); err != nil {
 		slog.Error(fmt.Sprintf("REST: could not start listening: %v", err))
-	}
-}
-
-func healthcheckHandler(cm *cluster.ClusterManager) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		slog.Debug("REST: received healthcheck")
-
-		data := cm.GetHealth(r.Context(), &externalpb.HealthcheckRequest{})
-
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(data); err != nil {
-			slog.Error(fmt.Sprintf("REST: error encoding healthcheck response: %v", err))
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		}
 	}
 }
 
