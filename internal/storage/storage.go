@@ -44,7 +44,8 @@ type DataStore struct {
 }
 
 // NewDataStore creates a new DataStore with a background cleanup goroutine.
-func NewDataStore(shardsCount int, shardsPerCursor int, cleanupInterval time.Duration) *DataStore {
+func NewDataStore(shardsPerCursor int, cleanupInterval time.Duration) *DataStore {
+	shardsCount := getShardCount()
 	ds := &DataStore{
 		shards:          make([]*shard, shardsCount),
 		ShardsCount:     uint64(shardsCount),
@@ -70,10 +71,26 @@ func NewDataStore(shardsCount int, shardsPerCursor int, cleanupInterval time.Dur
 	return ds
 }
 
+// getShardCount calculates the next power of 2 for a given number.
+func getShardCount() uint64 {
+	n := runtime.NumCPU() * 4
+	if n <= 1 {
+		return 1
+	}
+	n--
+	n |= n >> 1
+	n |= n >> 2
+	n |= n >> 4
+	n |= n >> 8
+	n |= n >> 16
+	n++
+	return uint64(n)
+}
+
 func (ds *DataStore) getShard(key string) *shard {
 	hasher := fnv.New64a()
 	hasher.Write([]byte(key))
-	return ds.shards[hasher.Sum64()%ds.ShardsCount]
+	return ds.shards[hasher.Sum64()&(ds.ShardsCount-1)]
 }
 
 // Get retrieves a storable item from the DataStore.

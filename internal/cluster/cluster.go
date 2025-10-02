@@ -47,7 +47,7 @@ type Peer struct {
 // NewClusterManager creates and initializes a new ClusterManager.
 func NewClusterManager(env *environment.Environment, cfg *config.Config) *ClusterManager {
 	cr := registry.NewCommandRegistry()
-	ds := storage.NewDataStore(cfg.Shards, cfg.ShardsPerCursor, cfg.CleanupInterval)
+	ds := storage.NewDataStore(cfg.ShardsPerCursor, cfg.CleanupInterval)
 	peerMap := make(map[string]*Peer)
 	hashRing := hashring.New(cfg.VNodeCount, cfg.Replicas)
 	connPool := pool.NewGrpcConnectionPool(func(address string) (*grpc.ClientConn, error) {
