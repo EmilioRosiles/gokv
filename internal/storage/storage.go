@@ -37,18 +37,17 @@ type shard struct {
 
 // DataStore is the unified, thread-safe, sharded key-value store.
 type DataStore struct {
-	shards          []*shard
-	janitor         *janitor
-	ShardsCount     uint64
-	ShardsPerCursor int
+	shards      []*shard
+	janitor     *janitor
+	ShardsCount uint64
 }
 
 // NewDataStore creates a new DataStore with a background cleanup goroutine.
-func NewDataStore(shardsCount int, shardsPerCursor int, cleanupInterval time.Duration) *DataStore {
+func NewDataStore(cleanupInterval time.Duration) *DataStore {
+	shardsCount := getShardCount()
 	ds := &DataStore{
-		shards:          make([]*shard, shardsCount),
-		ShardsCount:     uint64(shardsCount),
-		ShardsPerCursor: shardsPerCursor,
+		shards:      make([]*shard, shardsCount),
+		ShardsCount: uint64(shardsCount),
 	}
 
 	for i := range shardsCount {
@@ -70,10 +69,26 @@ func NewDataStore(shardsCount int, shardsPerCursor int, cleanupInterval time.Dur
 	return ds
 }
 
+// getShardCount calculates the next power of 2 for a given number.
+func getShardCount() uint64 {
+	n := runtime.NumCPU() * 4
+	if n <= 1 {
+		return 1
+	}
+	n--
+	n |= n >> 1
+	n |= n >> 2
+	n |= n >> 4
+	n |= n >> 8
+	n |= n >> 16
+	n++
+	return uint64(n)
+}
+
 func (ds *DataStore) getShard(key string) *shard {
 	hasher := fnv.New64a()
 	hasher.Write([]byte(key))
-	return ds.shards[hasher.Sum64()%ds.ShardsCount]
+	return ds.shards[hasher.Sum64()&(ds.ShardsCount-1)]
 }
 
 // Get retrieves a storable item from the DataStore.
@@ -112,10 +127,10 @@ func (ds *DataStore) Del(key string) {
 }
 
 // Scan iterates over all keys in a specific cursor range and calls the callback.
-func (ds *DataStore) Scan(cursor int, callback func(key string, val Storable)) {
+func (ds *DataStore) Scan(cursor, count int, callback func(key string, val Storable)) {
 	now := time.Now().Unix()
-	start := cursor * ds.ShardsPerCursor
-	end := start + ds.ShardsPerCursor
+	start := cursor
+	end := cursor + count
 
 	if cursor == -1 {
 		start = 0

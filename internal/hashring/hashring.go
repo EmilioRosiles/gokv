@@ -3,26 +3,27 @@ package hashring
 import (
 	"encoding/binary"
 	"fmt"
-	"hash/crc32"
+	"hash"
 	"hash/fnv"
 	"log/slog"
-	"maps"
 	"sort"
 	"strconv"
 	"sync"
 )
 
-type HashFunc func(data []byte) uint32
+type vNode struct {
+	hash   uint32
+	nodeID string
+}
 
 // Consistent Hashing implementation. Dictates how the keys are distributed in the Cluster.
 // This algorith minimizes key redistribution if the cluster state changes
 type HashRing struct {
 	mu         sync.RWMutex
-	hash       HashFunc
+	hash       hash.Hash32
 	vNodeCount int
 	Replicas   int
-	keys       []int
-	hashMap    map[int]string
+	vNodes     []vNode
 }
 
 // Creates new hashring
@@ -30,8 +31,7 @@ func New(vNodeCount int, replicas int) *HashRing {
 	return &HashRing{
 		vNodeCount: vNodeCount,
 		Replicas:   replicas,
-		hash:       crc32.ChecksumIEEE,
-		hashMap:    make(map[int]string),
+		hash:       fnv.New32a(),
 	}
 }
 
@@ -41,12 +41,13 @@ func (h *HashRing) Add(nodeIDs ...string) {
 	defer h.mu.Unlock()
 	for _, node := range nodeIDs {
 		for i := 0; i < h.vNodeCount; i++ {
-			hash := int(h.hash([]byte(strconv.Itoa(i) + node)))
-			h.keys = append(h.keys, hash)
-			h.hashMap[hash] = node
+			h.hash.Write([]byte(strconv.Itoa(i) + node))
+			hash := h.hash.Sum32()
+			h.hash.Reset()
+			h.vNodes = append(h.vNodes, vNode{hash: hash, nodeID: node})
 		}
 	}
-	sort.Ints(h.keys)
+	sort.Slice(h.vNodes, func(i, j int) bool { return h.vNodes[i].hash < h.vNodes[j].hash })
 }
 
 // Removes node from hash ring
@@ -54,17 +55,13 @@ func (h *HashRing) Remove(nodeID string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	for i := 0; i < h.vNodeCount; i++ {
-		hash := int(h.hash([]byte(strconv.Itoa(i) + nodeID)))
-		delete(h.hashMap, hash)
-
-		for j, k := range h.keys {
-			if k == hash {
-				h.keys = append(h.keys[:j], h.keys[j+1:]...)
-				break
-			}
+	newVNodes := make([]vNode, 0, len(h.vNodes))
+	for _, v := range h.vNodes {
+		if v.nodeID != nodeID {
+			newVNodes = append(newVNodes, v)
 		}
 	}
+	h.vNodes = newVNodes
 }
 
 // Get ID of the responsible node for a key
@@ -72,15 +69,18 @@ func (h *HashRing) Get(key string) []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	if len(h.keys) == 0 {
+	if len(h.vNodes) == 0 {
 		return []string{}
 	}
 
-	hash := int(h.hash([]byte(key)))
-	idx := sort.Search(len(h.keys), func(i int) bool {
-		return h.keys[i] >= hash
+	h.hash.Write([]byte(key))
+	hash := h.hash.Sum32()
+	h.hash.Reset()
+
+	idx := sort.Search(len(h.vNodes), func(i int) bool {
+		return h.vNodes[i].hash >= hash
 	})
-	if idx == len(h.keys) {
+	if idx == len(h.vNodes) {
 		idx = 0
 	}
 
@@ -88,14 +88,14 @@ func (h *HashRing) Get(key string) []string {
 	seen := make(map[string]struct{})
 
 	i := idx
-	for len(uniqueNodes) < h.Replicas && len(seen) < len(h.hashMap)/h.vNodeCount {
-		nodeID := h.hashMap[h.keys[i]]
-		if _, exists := seen[nodeID]; !exists {
-			seen[nodeID] = struct{}{}
-			uniqueNodes = append(uniqueNodes, nodeID)
+	for len(uniqueNodes) < h.Replicas && len(seen) < len(h.vNodes)/h.vNodeCount {
+		vNode := h.vNodes[i]
+		if _, exists := seen[vNode.nodeID]; !exists {
+			seen[vNode.nodeID] = struct{}{}
+			uniqueNodes = append(uniqueNodes, vNode.nodeID)
 		}
 		i++
-		if i == len(h.keys) {
+		if i == len(h.vNodes) {
 			i = 0
 		}
 	}
@@ -108,22 +108,23 @@ func (h *HashRing) GetNodes() []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	if len(h.hashMap) == 0 {
+	if len(h.vNodes) == 0 {
 		return []string{}
 	}
 
-	seen := make(map[string]struct{}, len(h.hashMap)/h.vNodeCount)
-	for _, nodeID := range h.hashMap {
-		seen[nodeID] = struct{}{}
+	nodeCount := len(h.vNodes) / h.vNodeCount
+
+	uniqueNodes := make([]string, 0, nodeCount)
+	seen := make(map[string]struct{}, nodeCount)
+
+	for _, vNode := range h.vNodes {
+		if _, exists := seen[vNode.nodeID]; !exists {
+			seen[vNode.nodeID] = struct{}{}
+			uniqueNodes = append(uniqueNodes, vNode.nodeID)
+		}
 	}
 
-	nodes := make([]string, 0, len(seen))
-	for nodeID := range seen {
-		nodes = append(nodes, nodeID)
-	}
-
-	sort.Strings(nodes)
-	return nodes
+	return uniqueNodes
 }
 
 // GetVersion returns a hash of all the alive peers in the cluster.
@@ -131,14 +132,14 @@ func (h *HashRing) GetVersion() uint64 {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	if len(h.keys) == 0 {
+	if len(h.vNodes) == 0 {
 		slog.Warn("hash ring: error computing hash ring version: no keys found")
 		return 0
 	}
 
 	hasher := fnv.New64a()
-	for _, key := range h.keys {
-		err := binary.Write(hasher, binary.BigEndian, int64(key))
+	for _, vNode := range h.vNodes {
+		err := binary.Write(hasher, binary.BigEndian, int64(vNode.hash))
 		if err != nil {
 			slog.Warn(fmt.Sprintf("hash ring: error computing hash ring version: %v", err))
 			return 0
@@ -157,12 +158,10 @@ func (h *HashRing) Copy() *HashRing {
 		hash:       h.hash,
 		vNodeCount: h.vNodeCount,
 		Replicas:   h.Replicas,
-		keys:       make([]int, len(h.keys)),
-		hashMap:    make(map[int]string),
+		vNodes:     make([]vNode, len(h.vNodes)),
 	}
 
-	copy(newRing.keys, h.keys)
-	maps.Copy(newRing.hashMap, h.hashMap)
+	copy(newRing.vNodes, h.vNodes)
 
 	return newRing
 }

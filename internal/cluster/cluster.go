@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -47,7 +49,7 @@ type Peer struct {
 // NewClusterManager creates and initializes a new ClusterManager.
 func NewClusterManager(env *environment.Environment, cfg *config.Config) *ClusterManager {
 	cr := registry.NewCommandRegistry()
-	ds := storage.NewDataStore(cfg.Shards, cfg.ShardsPerCursor, cfg.CleanupInterval)
+	ds := storage.NewDataStore(cfg.CleanupInterval)
 	peerMap := make(map[string]*Peer)
 	hashRing := hashring.New(cfg.VNodeCount, cfg.Replicas)
 	connPool := pool.NewGrpcConnectionPool(func(address string) (*grpc.ClientConn, error) {
@@ -222,4 +224,47 @@ func (cm *ClusterManager) GetRandomAlivePeers(num int) []*Peer {
 	}
 
 	return alivePeers[:num]
+}
+
+// parseCursor parses the global cursor string format "node_index.local_cursor".
+func parseCursor(cursorStr string) (nodeIdx, cursor int, err error) {
+	if cursorStr == "" || cursorStr == "0" {
+		return 0, 0, nil
+	}
+
+	parts := strings.SplitN(cursorStr, ".", 2)
+	if len(parts) == 1 {
+		nodeIdx, err = strconv.Atoi(parts[0])
+		if err != nil {
+			return 0, 0, fmt.Errorf("invalid cursor format")
+		}
+		return nodeIdx, 0, nil
+	}
+
+	nodeIdx, err = strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, 0, fmt.Errorf("invalid global cursor format")
+	}
+
+	cursor, err = strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, 0, fmt.Errorf("invalid local cursor format")
+	}
+
+	return nodeIdx, cursor, nil
+}
+
+// Finds nodeID responsible for the cursor of the SCAN command
+func (cm *ClusterManager) findCursorNode(key string) ([]string, error) {
+	nodeIdx, _, err := parseCursor(key)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeIDs := cm.HashRing.GetNodes()
+	if nodeIdx >= len(nodeIDs) {
+		return nil, fmt.Errorf("invalid global cursor")
+	}
+
+	return []string{nodeIDs[nodeIdx]}, nil
 }
