@@ -11,20 +11,22 @@ x-gokv-base: &gokv-base
         cpus: '0.25'
         memory: 128M
   volumes:
+    - .:/app
     - ./certs:/app/certs
-    - ./config.yml:/app/config.yaml
+    - ./config.yml:/app/config.yml
+    - ./.air.toml:/app/.air.toml
 
 services:
   gokv1:
     <<: *gokv-base
     build:
       context: ./
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
       - "50051:50051"
     environment:
       GOKV_LOG_LEVEL: "info"
-      GOKV_CONFIG_PATH: "/app/config.yaml"
+      GOKV_CONFIG_PATH: "/app/config.yml"
       
       GOKV_CLUSTER_NODE_ID: "gokv1"
       GOKV_CLUSTER_BIND_ADDR: "0.0.0.0:50000"
@@ -51,7 +53,7 @@ services:
       - "50052:50051"
     environment:
       GOKV_LOG_LEVEL: "info"
-      GOKV_CONFIG_PATH: "/app/config.yaml"
+      GOKV_CONFIG_PATH: "/app/config.yml"
       
       GOKV_CLUSTER_NODE_ID: "gokv2"
       GOKV_CLUSTER_BIND_ADDR: "0.0.0.0:50000"
@@ -81,7 +83,7 @@ services:
       - "50053:50051"
     environment:
       GOKV_LOG_LEVEL: "info"
-      GOKV_CONFIG_PATH: "/app/config.yaml"
+      GOKV_CONFIG_PATH: "/app/config.yml"
       
       GOKV_CLUSTER_NODE_ID: "gokv3"
       GOKV_CLUSTER_BIND_ADDR: "0.0.0.0:50000"
@@ -104,6 +106,7 @@ services:
       GOKV_EXTERNAL_REST_ADVERTISE_ADDR: "localhost:8082"
     depends_on:
       - gokv1
+      - gokv2
 
 networks:
   gokv-cluster:

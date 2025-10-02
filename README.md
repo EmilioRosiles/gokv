@@ -61,7 +61,7 @@ A command-line interface (CLI) tool is available for interacting with the cluste
 
 *   `DEL <key>`: Deletes a key.
 *   `EXPIRE <key> <ttl>`: Sets an expiration time on a key. `ttl` is a duration (e.g., `10s`, `1m`).
-*   `SCAN <cursor>`: Scans all keys in the cluster.
+*   `SCAN <cursor> <count>`: Scans all keys in the cluster.
 
 ### Hash Commands
 

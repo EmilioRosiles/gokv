@@ -1,0 +1,7 @@
+[build]
+  cmd = "go build -o /app/gokv ./main.go"
+  bin = "/app/gokv"
+  full_bin = "/app/gokv"
+
+[run]
+  cmd = "/app/gokv"
