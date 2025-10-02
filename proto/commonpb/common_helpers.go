@@ -38,10 +38,11 @@ func NewMap(m map[string]*Value) *Value {
 	}
 }
 
-func NewCursor(cursor uint64, data *Value) *Value {
+func NewCursor(cursor uint64, count int, data *Value) *Value {
 	payload := make(map[string]*Value, 2)
 	payload["cursor"] = NewInt(int64(cursor))
 	payload["data"] = data
+	payload["count"] = NewInt(int64(count))
 	return NewMap(payload)
 }
 

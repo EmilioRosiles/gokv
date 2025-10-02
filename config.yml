@@ -1,7 +1,6 @@
 cleanup_interval: 10s
 heartbeat_interval: 5s
 gossip_peer_count: 2
-v_node_count: 3
-message_timeout: 1s
+v_node_count: 100
+message_timeout: 2s
 replicas: 2
-shards_per_cursor: 16

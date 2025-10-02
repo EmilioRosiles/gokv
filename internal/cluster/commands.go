@@ -3,7 +3,6 @@ package cluster
 import (
 	"errors"
 	"fmt"
-	"math"
 	"strconv"
 	"time"
 
@@ -63,7 +62,7 @@ func (cm *ClusterManager) Scan(cur string, args ...[]byte) (*commonpb.CommandRes
 	}
 
 	nodeIDs := cm.HashRing.GetNodes()
-	cursorPerNode := int(math.Ceil(float64(cm.DataStore.ShardsCount) / float64(cm.DataStore.ShardsPerCursor)))
+	cursorPerNode := 1
 	totalCursors := cursorPerNode * len(nodeIDs)
 	if cursor < 0 || cursor >= totalCursors {
 		return nil, errors.New("HSCAN: invalid cursor")
@@ -75,7 +74,6 @@ func (cm *ClusterManager) Scan(cur string, args ...[]byte) (*commonpb.CommandRes
 	}
 
 	data := make([]*commonpb.Value, 0)
-
 	cm.DataStore.Scan(cursor%cursorPerNode, func(hash string, store storage.Storable) {
 		responsibleNodeIDs := cm.HashRing.Get(hash)
 		if responsibleNodeIDs[0] == cm.NodeID {
@@ -83,8 +81,8 @@ func (cm *ClusterManager) Scan(cur string, args ...[]byte) (*commonpb.CommandRes
 		}
 	})
 
-	cursorValue := commonpb.NewCursor(uint64(nextCursor), commonpb.NewList(data...))
-	response := commonpb.CommandResponse{Response: cursorValue}
+	value := commonpb.NewCursor(uint64(nextCursor), len(data), commonpb.NewList(data...))
+	response := commonpb.CommandResponse{Response: value}
 	return &response, err
 }
 
@@ -96,7 +94,7 @@ func (cm *ClusterManager) findCursorNode(key string) ([]string, error) {
 	}
 
 	nodeIDs := cm.HashRing.GetNodes()
-	cursorPerNode := int(math.Ceil(float64(cm.DataStore.ShardsCount) / float64(cm.DataStore.ShardsPerCursor)))
+	cursorPerNode := 1
 	totalCursors := cursorPerNode * len(nodeIDs)
 	if cursor < 0 || cursor >= totalCursors {
 		return []string{}, errors.New("HSCAN: invalid cursor")

@@ -37,19 +37,17 @@ type shard struct {
 
 // DataStore is the unified, thread-safe, sharded key-value store.
 type DataStore struct {
-	shards          []*shard
-	janitor         *janitor
-	ShardsCount     uint64
-	ShardsPerCursor int
+	shards      []*shard
+	janitor     *janitor
+	ShardsCount uint64
 }
 
 // NewDataStore creates a new DataStore with a background cleanup goroutine.
-func NewDataStore(shardsPerCursor int, cleanupInterval time.Duration) *DataStore {
+func NewDataStore(cleanupInterval time.Duration) *DataStore {
 	shardsCount := getShardCount()
 	ds := &DataStore{
-		shards:          make([]*shard, shardsCount),
-		ShardsCount:     uint64(shardsCount),
-		ShardsPerCursor: shardsPerCursor,
+		shards:      make([]*shard, shardsCount),
+		ShardsCount: uint64(shardsCount),
 	}
 
 	for i := range shardsCount {
@@ -131,8 +129,8 @@ func (ds *DataStore) Del(key string) {
 // Scan iterates over all keys in a specific cursor range and calls the callback.
 func (ds *DataStore) Scan(cursor int, callback func(key string, val Storable)) {
 	now := time.Now().Unix()
-	start := cursor * ds.ShardsPerCursor
-	end := start + ds.ShardsPerCursor
+	start := 0
+	end := int(ds.ShardsCount)
 
 	if cursor == -1 {
 		start = 0

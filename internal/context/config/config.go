@@ -18,7 +18,6 @@ type Config struct {
 	VNodeCount        int           `yaml:"v_node_count"`
 	MessageTimeout    time.Duration `yaml:"message_timeout"`
 	Replicas          int           `yaml:"replicas"`
-	ShardsPerCursor   int           `yaml:"shards_per_cursor"`
 }
 
 func Default() *Config {
@@ -26,10 +25,9 @@ func Default() *Config {
 		CleanupInterval:   10 * time.Second,
 		HeartbeatInterval: 5 * time.Second,
 		GossipPeerCount:   2,
-		VNodeCount:        3,
+		VNodeCount:        100,
 		MessageTimeout:    1 * time.Second,
 		Replicas:          2,
-		ShardsPerCursor:   128,
 	}
 }
 
