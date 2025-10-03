@@ -31,6 +31,5 @@ message CommandRequest {
 }
 
 message CommandResponse {
-  string error = 1;
-  Value response = 2;
+  Value response = 1;
 }

@@ -75,11 +75,6 @@ func commandHandler(cm *cluster.ClusterManager) http.HandlerFunc {
 			Args:    args,
 		})
 
-		if resp.Error != "" {
-			http.Error(w, resp.Error, http.StatusBadRequest)
-			return
-		}
-
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

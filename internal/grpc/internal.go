@@ -17,8 +17,10 @@ import (
 	"gokv/proto/internalpb"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 // clusterNodeServer is the implementation of the ClusterNode gRPC server.
@@ -64,7 +66,7 @@ func StartInternalServer(env *environment.Environment, cm *cluster.ClusterManage
 // Heartbeat handles incoming heartbeat requests from other nodes in the cluster.
 // It merges the state of the incoming node and its peers with the current node's state.
 func (s *internalServer) Heartbeat(ctx context.Context, req *internalpb.HeartbeatRequest) (*internalpb.HeartbeatResponse, error) {
-	slog.Debug("gRPC internal: received heartbeat")
+	// slog.Debug("gRPC internal: received heartbeat")
 	s.cm.MergeState(req.Peers)
 	if s.cm.LastRebalancedRing.GetVersion() != s.cm.HashRing.GetVersion() {
 		go s.cm.Rebalance(s.cm.LastRebalancedRing, s.cm.HashRing)
@@ -103,7 +105,7 @@ func (s *internalServer) ForwardCommand(ctx context.Context, req *commonpb.Comma
 	responsibleNodeIDs := s.cm.HashRing.Get(req.Key)
 	cmd, ok := s.cm.CommandRegistry.Get(req.Command)
 	if !ok {
-		return nil, fmt.Errorf("unknown command: %s", req.Command)
+		return nil, status.Errorf(codes.InvalidArgument, "unknown command: %s", req.Command)
 	}
 
 	if cmd.ResponsibleFunc != nil {
@@ -117,7 +119,7 @@ func (s *internalServer) ForwardCommand(ctx context.Context, req *commonpb.Comma
 	if slices.Contains(responsibleNodeIDs, s.cm.NodeID) {
 		res, err = s.cm.RunLocalCommand(ctx, req)
 	} else {
-		err = fmt.Errorf("node %s not responsible for forwarded command %s %s", req.Command, s.cm.NodeID, req.Key)
+		err = status.Errorf(codes.Internal, "node %s not responsible for forwarded command %s %s", req.Command, s.cm.NodeID, req.Key)
 	}
 
 	if err != nil {
@@ -140,7 +142,7 @@ func (s *internalServer) Rebalance(stream internalpb.InternalServer_RebalanceSer
 
 		if err != nil {
 			slog.Warn(fmt.Sprintf("gRPC internal: error from rebalance stream: %v", err))
-			return err
+			return status.Errorf(codes.Canceled, "%s", err)
 		}
 
 		slog.Debug(fmt.Sprintf("gRPC internal: processing rebalance message for %v commands", len(req.Commands)))
@@ -149,7 +151,7 @@ func (s *internalServer) Rebalance(stream internalpb.InternalServer_RebalanceSer
 			if slices.Contains(responsibleNodeIDs, s.cm.NodeID) {
 				_, err = s.cm.RunLocalCommand(ctx, command)
 			} else {
-				err = fmt.Errorf("node %v not responsible for command %s %s", s.cm.NodeID, command.Command, command.Key)
+				err = status.Errorf(codes.DataLoss, "node %v not responsible for command %s %s", s.cm.NodeID, command.Command, command.Key)
 			}
 			if err != nil {
 				slog.Warn(fmt.Sprintf("gRPC internal: error rebalancing command: %v", err))
@@ -160,7 +162,7 @@ func (s *internalServer) Rebalance(stream internalpb.InternalServer_RebalanceSer
 	err := stream.SendAndClose(&internalpb.RebalanceResponse{Success: true})
 	if err != nil {
 		slog.Warn(fmt.Sprintf("gRPC internal: error sending to rebalance stream: %v", err))
-		return err
+		return status.Errorf(codes.Canceled, "%s", err)
 	}
 
 	return nil
