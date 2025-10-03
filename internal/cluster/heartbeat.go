@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"time"
 
 	"gokv/internal/context/config"
@@ -12,11 +13,13 @@ import (
 
 // StartHeartbeat starts the heartbeat process to periodically send heartbeats to other nodes.
 func (cm *ClusterManager) StartHeartbeat(cfg *config.Config) {
-	ticker := time.NewTicker(cfg.HeartbeatInterval) // Heartbeat interval.
-	defer ticker.Stop()
+	interval := cfg.HeartbeatInterval
+	jitterRange := time.Duration(float64(interval) * 0.25)
+	for {
+		jitter := time.Duration(rand.Int63n(int64(jitterRange)*2)) - jitterRange
+		time.Sleep(interval + jitter)
 
-	for range ticker.C {
-		gossipTargets := cm.GetRandomAlivePeers(cfg.GossipPeerCount) // Number of peers to gossip with.
+		gossipTargets := cm.GetRandomAlivePeers(cfg.GossipPeerCount)
 		cm.Heartbeat(gossipTargets...)
 		if cm.LastRebalancedRing.GetVersion() != cm.HashRing.GetVersion() {
 			go cm.Rebalance(cm.LastRebalancedRing, cm.HashRing)

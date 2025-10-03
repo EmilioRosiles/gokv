@@ -31,6 +31,7 @@ services:
       GOKV_CLUSTER_NODE_ID: "gokv1"
       GOKV_CLUSTER_BIND_ADDR: "0.0.0.0:50000"
       GOKV_CLUSTER_ADVERTISE_ADDR: "gokv1:50000"
+      GOKV_CLUSTER_SEEDS: "gokv2=gokv2:50000,gokv3=gokv3:50000"
 
       GOKV_INTERNAL_TLS_CA_PATH: "/app/certs/ca.cert.pem"
       GOKV_INTERNAL_TLS_SERVER_CERT_PATH: "/app/certs/internal-server.cert.pem"
@@ -58,7 +59,7 @@ services:
       GOKV_CLUSTER_NODE_ID: "gokv2"
       GOKV_CLUSTER_BIND_ADDR: "0.0.0.0:50000"
       GOKV_CLUSTER_ADVERTISE_ADDR: "gokv2:50000"
-      GOKV_CLUSTER_SEEDS: "gokv1=gokv1:50000"
+      GOKV_CLUSTER_SEEDS: "gokv1=gokv1:50000,gokv3=gokv3:50000"
       
       GOKV_INTERNAL_TLS_CA_PATH: "/app/certs/ca.cert.pem"
       GOKV_INTERNAL_TLS_SERVER_CERT_PATH: "/app/certs/internal-server.cert.pem"
@@ -88,7 +89,7 @@ services:
       GOKV_CLUSTER_NODE_ID: "gokv3"
       GOKV_CLUSTER_BIND_ADDR: "0.0.0.0:50000"
       GOKV_CLUSTER_ADVERTISE_ADDR: "gokv3:50000"
-      GOKV_CLUSTER_SEEDS: "gokv1=gokv1:50000"
+      GOKV_CLUSTER_SEEDS: "gokv1=gokv1:50000,gokv2=gokv2:50000"
       
       GOKV_INTERNAL_TLS_CA_PATH: "/app/certs/ca.cert.pem"
       GOKV_INTERNAL_TLS_SERVER_CERT_PATH: "/app/certs/internal-server.cert.pem"
@@ -106,7 +107,6 @@ services:
       GOKV_EXTERNAL_REST_ADVERTISE_ADDR: "localhost:8082"
     depends_on:
       - gokv1
-      - gokv2
 
 networks:
   gokv-cluster:

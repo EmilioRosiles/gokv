@@ -1,7 +1,8 @@
 [build]
-  cmd = "go build -o /app/gokv ./main.go"
-  bin = "/app/gokv"
-  full_bin = "/app/gokv"
+  cmd = "go build -o /tmp/gokv ./main.go"
+  bin = "/tmp/gokv"
+  full_bin = "/tmp/gokv"
+  delay = 100
 
 [run]
   cmd = "/app/gokv"
