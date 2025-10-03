@@ -60,7 +60,7 @@ func (cm *ClusterManager) Scan(cursorStr string, args ...[]byte) (*commonpb.Comm
 
 	nodeIdx, cursor, err := parseCursor(cursorStr)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "SCAN: %w", err)
+		return nil, status.Errorf(codes.InvalidArgument, "SCAN: %s", err.Error())
 	}
 
 	if cursor < 0 || cursor >= int(cm.DataStore.ShardsCount) {
