@@ -21,8 +21,10 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 // ClusterManager manages the cluster state, including node information, peer list, data store, and hash ring.
@@ -75,8 +77,9 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 			grpc.WithConnectParams(grpc.ConnectParams{MinConnectTimeout: cfg.MessageTimeout}),
 			grpc.WithUnaryInterceptor(retry.UnaryClientInterceptor(
 				retry.WithMax(uint(cfg.MessageRetry)),
-				retry.WithPerRetryTimeout(cfg.MessageTimeout)),
-			),
+				retry.WithCodes(codes.Internal),
+				retry.WithPerRetryTimeout(cfg.MessageTimeout),
+			)),
 		)
 	})
 
@@ -241,19 +244,19 @@ func parseCursor(cursorStr string) (nodeIdx, cursor int, err error) {
 	if len(parts) == 1 {
 		nodeIdx, err = strconv.Atoi(parts[0])
 		if err != nil {
-			return 0, 0, fmt.Errorf("invalid cursor format")
+			return 0, 0, status.Errorf(codes.InvalidArgument, "invalid cursor format")
 		}
 		return nodeIdx, 0, nil
 	}
 
 	nodeIdx, err = strconv.Atoi(parts[0])
 	if err != nil {
-		return 0, 0, fmt.Errorf("invalid global cursor format")
+		return 0, 0, status.Errorf(codes.InvalidArgument, "invalid global cursor format")
 	}
 
 	cursor, err = strconv.Atoi(parts[1])
 	if err != nil {
-		return 0, 0, fmt.Errorf("invalid local cursor format")
+		return 0, 0, status.Errorf(codes.InvalidArgument, "invalid local cursor format")
 	}
 
 	return nodeIdx, cursor, nil
@@ -268,7 +271,7 @@ func (cm *ClusterManager) findCursorNode(key string) ([]string, error) {
 
 	nodeIDs := cm.HashRing.GetNodes()
 	if nodeIdx >= len(nodeIDs) {
-		return nil, fmt.Errorf("invalid global cursor")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid global cursor")
 	}
 
 	return []string{nodeIDs[nodeIdx]}, nil

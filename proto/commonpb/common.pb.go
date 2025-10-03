@@ -333,8 +333,7 @@ func (x *CommandRequest) GetArgs() [][]byte {
 
 type CommandResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Error         string                 `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`
-	Response      *Value                 `protobuf:"bytes,2,opt,name=response,proto3" json:"response,omitempty"`
+	Response      *Value                 `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -369,13 +368,6 @@ func (*CommandResponse) Descriptor() ([]byte, []int) {
 	return file_commonpb_common_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *CommandResponse) GetError() string {
-	if x != nil {
-		return x.Error
-	}
-	return ""
-}
-
 func (x *CommandResponse) GetResponse() *Value {
 	if x != nil {
 		return x.Response
@@ -407,10 +399,9 @@ const file_commonpb_common_proto_rawDesc = "" +
 	"\x0eCommandRequest\x12\x18\n" +
 	"\acommand\x18\x01 \x01(\tR\acommand\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12\x12\n" +
-	"\x04args\x18\x03 \x03(\fR\x04args\"T\n" +
-	"\x0fCommandResponse\x12\x14\n" +
-	"\x05error\x18\x01 \x01(\tR\x05error\x12+\n" +
-	"\bresponse\x18\x02 \x01(\v2\x0f.commonpb.ValueR\bresponseB\x1eZ\x1cgokv/proto/commonpb;commonpbb\x06proto3"
+	"\x04args\x18\x03 \x03(\fR\x04args\">\n" +
+	"\x0fCommandResponse\x12+\n" +
+	"\bresponse\x18\x01 \x01(\v2\x0f.commonpb.ValueR\bresponseB\x1eZ\x1cgokv/proto/commonpb;commonpbb\x06proto3"
 
 var (
 	file_commonpb_common_proto_rawDescOnce sync.Once

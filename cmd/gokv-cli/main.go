@@ -92,10 +92,6 @@ var runCmd = &cobra.Command{
 			log.Fatalf("Failed to run command: %v", err)
 		}
 
-		if res.Error != "" {
-			log.Fatalf("Error: %s", res.Error)
-		}
-
 		printValue(res.Response)
 		fmt.Print("\n")
 	},
