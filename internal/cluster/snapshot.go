@@ -55,23 +55,26 @@ func (cm *ClusterManager) snapshot(env *environment.Environment) {
 	writer := bufio.NewWriter(file)
 
 	cm.DataStore.Scan(-1, 0, func(key string, store storage.Storable) {
-		commandMap := cm.createMigrationCommands(key, store, []string{cm.NodeID})
-		if commands, ok := commandMap[cm.NodeID]; ok {
-			for _, cmd := range commands {
-				data, err := proto.Marshal(cmd)
-				if err != nil {
-					slog.Error(fmt.Sprintf("snapshot: failed to marshal command: %v", err))
-					continue
-				}
+		responsibleNodeIDs := cm.HashRing.Get(key)
+		if cm.NodeID == responsibleNodeIDs[0] {
+			commandMap := cm.createMigrationCommands(key, store, []string{cm.NodeID})
+			if commands, ok := commandMap[cm.NodeID]; ok {
+				for _, cmd := range commands {
+					data, err := proto.Marshal(cmd)
+					if err != nil {
+						slog.Error(fmt.Sprintf("snapshot: failed to marshal command: %v", err))
+						continue
+					}
 
-				if err := binary.Write(writer, binary.LittleEndian, int64(len(data))); err != nil {
-					slog.Error(fmt.Sprintf("snapshot: failed to write message length: %v", err))
-					continue
-				}
+					if err := binary.Write(writer, binary.LittleEndian, int64(len(data))); err != nil {
+						slog.Error(fmt.Sprintf("snapshot: failed to write message length: %v", err))
+						continue
+					}
 
-				if _, err := writer.Write(data); err != nil {
-					slog.Error(fmt.Sprintf("snapshot: failed to write message data: %v", err))
-					continue
+					if _, err := writer.Write(data); err != nil {
+						slog.Error(fmt.Sprintf("snapshot: failed to write message data: %v", err))
+						continue
+					}
 				}
 			}
 		}
@@ -81,7 +84,7 @@ func (cm *ClusterManager) snapshot(env *environment.Environment) {
 		slog.Error(fmt.Sprintf("snapshot: failed to flush writer: %v", err))
 	}
 
-	slog.Info("snapshot: snapshot created")
+	slog.Debug("snapshot: snapshot created")
 }
 
 func (cm *ClusterManager) LoadSnapshop(env *environment.Environment) {

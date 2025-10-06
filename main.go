@@ -55,11 +55,9 @@ func main() {
 	go cm.StartHeartbeat(cfg)
 	go cm.StartSnapshop(env, cfg)
 
-	// Wait for a shutdown signal.
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 
 	<-stop
 	slog.Info(fmt.Sprintf("main: shutting down node: %s", env.NodeID))
-	// cm.Shutdown()
 }

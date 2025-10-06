@@ -31,7 +31,7 @@ func Default() *Config {
 		MessageTimeout:      1 * time.Second,
 		Replicas:            2,
 		MessageRetry:        3,
-		PersistenceInterval: 0,
+		PersistenceInterval: 10 * time.Second,
 	}
 }
 

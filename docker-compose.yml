@@ -1,7 +1,7 @@
 x-gokv-base: &gokv-base
   image: gokv
   expose:
-    - "50000"
+    - "7946"
   deploy:
     resources:
       limits:
@@ -27,11 +27,12 @@ services:
     environment:
       GOKV_LOG_LEVEL: "info"
       GOKV_CONFIG_PATH: "/app/config.yml"
+      GOKV_PERSISTENCE_PATH: "tmp/snapshot1"
       
       GOKV_CLUSTER_NODE_ID: "gokv1"
-      GOKV_CLUSTER_BIND_ADDR: "0.0.0.0:50000"
-      GOKV_CLUSTER_ADVERTISE_ADDR: "gokv1:50000"
-      GOKV_CLUSTER_SEEDS: "gokv2=gokv2:50000,gokv3=gokv3:50000"
+      GOKV_CLUSTER_BIND_ADDR: "0.0.0.0:7946"
+      GOKV_CLUSTER_ADVERTISE_ADDR: "gokv1:7946"
+      GOKV_CLUSTER_SEEDS: "gokv2=gokv2:7946,gokv3=gokv3:7946"
 
       GOKV_INTERNAL_TLS_CA_PATH: "/app/certs/ca.cert.pem"
       GOKV_INTERNAL_TLS_SERVER_CERT_PATH: "/app/certs/internal-server.cert.pem"
@@ -55,11 +56,12 @@ services:
     environment:
       GOKV_LOG_LEVEL: "info"
       GOKV_CONFIG_PATH: "/app/config.yml"
+      GOKV_PERSISTENCE_PATH: "tmp/snapshot2"
       
       GOKV_CLUSTER_NODE_ID: "gokv2"
-      GOKV_CLUSTER_BIND_ADDR: "0.0.0.0:50000"
-      GOKV_CLUSTER_ADVERTISE_ADDR: "gokv2:50000"
-      GOKV_CLUSTER_SEEDS: "gokv1=gokv1:50000,gokv3=gokv3:50000"
+      GOKV_CLUSTER_BIND_ADDR: "0.0.0.0:7946"
+      GOKV_CLUSTER_ADVERTISE_ADDR: "gokv2:7946"
+      GOKV_CLUSTER_SEEDS: "gokv1=gokv1:7946,gokv3=gokv3:7946"
       
       GOKV_INTERNAL_TLS_CA_PATH: "/app/certs/ca.cert.pem"
       GOKV_INTERNAL_TLS_SERVER_CERT_PATH: "/app/certs/internal-server.cert.pem"
@@ -85,11 +87,12 @@ services:
     environment:
       GOKV_LOG_LEVEL: "info"
       GOKV_CONFIG_PATH: "/app/config.yml"
+      GOKV_PERSISTENCE_PATH: "tmp/snapshot3"
       
       GOKV_CLUSTER_NODE_ID: "gokv3"
-      GOKV_CLUSTER_BIND_ADDR: "0.0.0.0:50000"
-      GOKV_CLUSTER_ADVERTISE_ADDR: "gokv3:50000"
-      GOKV_CLUSTER_SEEDS: "gokv1=gokv1:50000,gokv2=gokv2:50000"
+      GOKV_CLUSTER_BIND_ADDR: "0.0.0.0:7946"
+      GOKV_CLUSTER_ADVERTISE_ADDR: "gokv3:7946"
+      GOKV_CLUSTER_SEEDS: "gokv1=gokv1:7946,gokv2=gokv2:7946"
       
       GOKV_INTERNAL_TLS_CA_PATH: "/app/certs/ca.cert.pem"
       GOKV_INTERNAL_TLS_SERVER_CERT_PATH: "/app/certs/internal-server.cert.pem"
