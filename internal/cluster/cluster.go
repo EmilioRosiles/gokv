@@ -77,7 +77,7 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 			grpc.WithConnectParams(grpc.ConnectParams{MinConnectTimeout: cfg.MessageTimeout}),
 			grpc.WithUnaryInterceptor(retry.UnaryClientInterceptor(
 				retry.WithMax(uint(cfg.MessageRetry)),
-				retry.WithCodes(codes.Internal),
+				retry.WithCodes(codes.Internal, codes.Unavailable),
 				retry.WithPerRetryTimeout(cfg.MessageTimeout),
 			)),
 		)

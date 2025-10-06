@@ -28,6 +28,7 @@ type Environment struct {
 	ExternalGrpcAdvertiseAddr string
 	ExternalRestBindAddr      string
 	ExternalRestAdvertiseAddr string
+	PersistencePath           string
 }
 
 // LoadEnvironment loads the environment variables from the .env file and the system.
@@ -53,6 +54,7 @@ func LoadEnvironment() *Environment {
 		ExternalGrpcAdvertiseAddr: os.Getenv("GOKV_EXTERNAL_GRPC_ADVERTISE_ADDR"),
 		ExternalRestBindAddr:      os.Getenv("GOKV_EXTERNAL_REST_BIND_ADDR"),
 		ExternalRestAdvertiseAddr: os.Getenv("GOKV_EXTERNAL_REST_ADVERTISE_ADDR"),
+		PersistencePath:           os.Getenv("GOKV_PERSISTENCE_PATH"),
 	}
 }
 

@@ -60,4 +60,5 @@ func main() {
 
 	<-stop
 	slog.Info(fmt.Sprintf("main: shutting down node: %s", env.NodeID))
+	// cm.Shutdown()
 }

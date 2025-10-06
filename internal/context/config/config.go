@@ -12,24 +12,26 @@ import (
 )
 
 type Config struct {
-	CleanupInterval   time.Duration `yaml:"cleanup_interval"`
-	HeartbeatInterval time.Duration `yaml:"heartbeat_interval"`
-	GossipPeerCount   int           `yaml:"gossip_peer_count"`
-	VNodeCount        int           `yaml:"v_node_count"`
-	MessageTimeout    time.Duration `yaml:"message_timeout"`
-	Replicas          int           `yaml:"replicas"`
-	MessageRetry      int           `yaml:"message_retry"`
+	CleanupInterval     time.Duration `yaml:"cleanup_interval"`
+	HeartbeatInterval   time.Duration `yaml:"heartbeat_interval"`
+	GossipPeerCount     int           `yaml:"gossip_peer_count"`
+	VNodeCount          int           `yaml:"v_node_count"`
+	MessageTimeout      time.Duration `yaml:"message_timeout"`
+	Replicas            int           `yaml:"replicas"`
+	MessageRetry        int           `yaml:"message_retry"`
+	PersistenceInterval time.Duration `yaml:"persistence_interval"`
 }
 
 func Default() *Config {
 	return &Config{
-		CleanupInterval:   10 * time.Second,
-		HeartbeatInterval: 3 * time.Second,
-		GossipPeerCount:   2,
-		VNodeCount:        100,
-		MessageTimeout:    1 * time.Second,
-		Replicas:          2,
-		MessageRetry:      3,
+		CleanupInterval:     10 * time.Second,
+		HeartbeatInterval:   3 * time.Second,
+		GossipPeerCount:     2,
+		VNodeCount:          100,
+		MessageTimeout:      1 * time.Second,
+		Replicas:            2,
+		MessageRetry:        3,
+		PersistenceInterval: 0,
 	}
 }
 

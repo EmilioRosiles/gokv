@@ -5,3 +5,4 @@ v_node_count: 100
 message_timeout: 1s
 message_retry: 3
 replicas: 2
+persistence_interval: 0
