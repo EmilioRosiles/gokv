@@ -84,17 +84,17 @@ func (cm *ClusterManager) snapshot(env *environment.Environment) {
 	slog.Info("snapshot: snapshot created")
 }
 
-func (cm *ClusterManager) Load(env *environment.Environment) {
+func (cm *ClusterManager) LoadSnapshop(env *environment.Environment) {
 	if env.PersistencePath == "" {
 		return
 	}
 
-	slog.Info("snapshot: loading snapshot")
+	slog.Debug("snapshot: loading snapshot")
 
 	file, err := os.Open(env.PersistencePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			slog.Info("snapshot: snapshot file not found")
+			slog.Error("snapshot: snapshot file not found")
 			return
 		}
 		slog.Error(fmt.Sprintf("snapshot: failed to open snapshot file: %v", err))
@@ -126,10 +126,8 @@ func (cm *ClusterManager) Load(env *environment.Environment) {
 			continue
 		}
 
-		if command, ok := cm.CommandRegistry.Get(cmd.Command); ok {
-			command.Run(cmd.Key, cmd.Args...)
-		}
+		cm.RunLocalCommand(&cmd)
 	}
 
-	slog.Info("snapshot: snapshot loaded")
+	slog.Debug("snapshot: snapshot loaded")
 }

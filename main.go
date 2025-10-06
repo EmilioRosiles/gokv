@@ -27,6 +27,7 @@ func main() {
 
 	// Create a new cluster manager.
 	cm := cluster.NewClusterManager(env, cfg)
+	cm.LoadSnapshop(env)
 
 	// Start the gRPC/REST internal and external servers.
 	go grpc.StartInternalServer(env, cm)
@@ -51,8 +52,11 @@ func main() {
 		}
 	}
 
-	// Start the heartbeat process in a new goroutine.
+	// Start the heartbeat process.
 	go cm.StartHeartbeat(cfg)
+
+	// Start the snapshop process.
+	go cm.StartSnapshop(env, cfg)
 
 	// Wait for a shutdown signal.
 	stop := make(chan os.Signal, 1)
