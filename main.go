@@ -15,7 +15,7 @@ import (
 )
 
 // main is the entry point of the gokv application.
-// It initializes the cluster manager, starts the gRPC server, and handles graceful shutdown.
+// It initializes the cluster manager, APIs, gossip and snapshots.
 func main() {
 	env := environment.LoadEnvironment()
 
@@ -25,20 +25,20 @@ func main() {
 	slog.Info(fmt.Sprintf("main: starting node: %s", env.NodeID))
 	cfg := config.LoadConfig(env)
 
-	// Create a new cluster manager.
 	cm := cluster.NewClusterManager(env, cfg)
 	cm.LoadSnapshop(env)
 
-	// Start the gRPC/REST internal and external servers.
 	go grpc.StartInternalServer(env, cm)
+
 	if env.ExternalGrpcBindAddr != "" {
 		go grpc.StartExternalServer(env, cm)
 	}
+
 	if env.ExternalRestBindAddr != "" {
 		go rest.StartRESTServer(env, cm)
 	}
 
-	// If seed nodes are provided, add it to the cluster, send heartbeat, and trigger initial rebalance.
+	// If seed nodes are provided, add them to the cluster, send heartbeat, and trigger initial rebalance.
 	if len(env.ClusterSeeds) > 0 {
 		for nodeID, internalAddr := range env.ClusterSeeds {
 			cm.AddNode(nodeID, internalAddr, "")
@@ -52,10 +52,7 @@ func main() {
 		}
 	}
 
-	// Start the heartbeat process.
 	go cm.StartHeartbeat(cfg)
-
-	// Start the snapshop process.
 	go cm.StartSnapshop(env, cfg)
 
 	// Wait for a shutdown signal.
