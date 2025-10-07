@@ -13,7 +13,7 @@ rebalance:
 
 persistence:
   persistence_interval: 10s
-  restore_on_startup: auto
+  restore_on_startup: true
 
 maintenance:
   cleanup_interval: 10s

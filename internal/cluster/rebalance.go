@@ -83,7 +83,7 @@ func (cm *ClusterManager) runRebalance() {
 	cm.RebalanceManager.LastRing = newRing.Copy()
 	cm.Mu.Unlock()
 
-	slog.Info("rebalance: started")
+	slog.Debug("rebalance: started")
 
 	commandsByNode := make(map[string][]*commonpb.CommandRequest)
 	deleteList := make([]string, 0)
@@ -122,5 +122,5 @@ func (cm *ClusterManager) runRebalance() {
 		cm.DataStore.Del(key)
 	}
 
-	slog.Info("rebalance: finished")
+	slog.Debug("rebalance: finished")
 }

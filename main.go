@@ -45,7 +45,7 @@ func main() {
 		cm.Heartbeat(cm.GetRandomAlivePeers(cm.AlivePeers())...)
 	}
 
-	if cfg.Persistence.RestoreOnStartup == "always" || (cfg.Persistence.RestoreOnStartup == "auto" && cfg.Cluster.Replicas <= 1) {
+	if cfg.Persistence.RestoreOnStartup {
 		cm.LoadSnapshop(env)
 	}
 
