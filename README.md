@@ -77,6 +77,7 @@ A command-line interface (CLI) tool is available for interacting with the cluste
 *   `RPUSH <key> <value...>`: Append one or more values to a list.
 *   `RPOP <key> <count>`: Remove and get the last `count` elements from a list.
 *   `LLEN <key>`: Get the length of a list.
+*   `LSET <key> <value...>`: Creates a list, replaces if it already exists (Equivalent to running DEL + RPUSH).
 
 ### Running with TLS (Optional)
 

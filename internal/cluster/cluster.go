@@ -114,6 +114,7 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 	cr.Register("RPUSH", registry.Command{Run: cm.RPush, Replicate: true})
 	cr.Register("RPOP", registry.Command{Run: cm.RPop, Replicate: true})
 	cr.Register("LLEN", registry.Command{Run: cm.LLen})
+	cr.Register("LSET", registry.Command{Run: cm.LSet, Replicate: true})
 
 	slog.Debug(fmt.Sprintf("cluster manager: created cluster manager for node: %s", cm.NodeID))
 	return cm

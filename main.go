@@ -44,12 +44,7 @@ func main() {
 			cm.AddNode(nodeID, internalAddr, "")
 		}
 		cm.Heartbeat(cm.GetRandomAlivePeers(cm.AlivePeers())...)
-		if cm.LastRebalancedRing.GetVersion() != cm.HashRing.GetVersion() {
-			go cm.Rebalance(cm.LastRebalancedRing, cm.HashRing)
-			cm.Mu.Lock()
-			cm.LastRebalancedRing = cm.HashRing.Copy()
-			cm.Mu.Unlock()
-		}
+		go cm.Rebalance()
 	}
 
 	go cm.StartHeartbeat(cfg)

@@ -68,12 +68,7 @@ func StartInternalServer(env *environment.Environment, cm *cluster.ClusterManage
 func (s *internalServer) Heartbeat(ctx context.Context, req *internalpb.HeartbeatRequest) (*internalpb.HeartbeatResponse, error) {
 	// slog.Debug("gRPC internal: received heartbeat")
 	s.cm.MergeState(req.Peers)
-	if s.cm.LastRebalancedRing.GetVersion() != s.cm.HashRing.GetVersion() {
-		go s.cm.Rebalance(s.cm.LastRebalancedRing, s.cm.HashRing)
-		s.cm.Mu.Lock()
-		s.cm.LastRebalancedRing = s.cm.HashRing.Copy()
-		s.cm.Mu.Unlock()
-	}
+	go s.cm.Rebalance()
 
 	s.cm.Mu.RLock()
 	self := &internalpb.HeartbeatNode{

@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"slices"
 
-	"gokv/internal/hashring"
 	"gokv/internal/storage"
 	"gokv/proto/commonpb"
 	"gokv/proto/internalpb"
@@ -44,8 +43,19 @@ func (cm *ClusterManager) rebalanceCommands(nodeID string, commands []*commonpb.
 }
 
 // Rebalance redistributes keys across the cluster when the state changes.
-func (cm *ClusterManager) Rebalance(oldRing, newRing *hashring.HashRing) {
-	slog.Debug("rebalance: started")
+func (cm *ClusterManager) Rebalance() {
+	oldRing := cm.LastRebalancedRing
+	newRing := cm.HashRing
+
+	if cm.LastRebalancedRing.GetVersion() == cm.HashRing.GetVersion() {
+		return
+	}
+
+	cm.Mu.Lock()
+	cm.LastRebalancedRing = cm.HashRing.Copy()
+	cm.Mu.Unlock()
+
+	slog.Info("rebalance: started")
 
 	commandsByNode := make(map[string][]*commonpb.CommandRequest)
 	deleteList := make([]string, 0)
@@ -84,5 +94,5 @@ func (cm *ClusterManager) Rebalance(oldRing, newRing *hashring.HashRing) {
 		cm.DataStore.Del(key)
 	}
 
-	slog.Debug("rebalance: finished")
+	slog.Info("rebalance: finished")
 }

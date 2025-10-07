@@ -71,7 +71,7 @@ func (cm *ClusterManager) createListCommand(listName string, store *storage.List
 	}
 
 	return &commonpb.CommandRequest{
-		Command: "RPUSH",
+		Command: "LSET",
 		Key:     listName,
 		Args:    args,
 	}
