@@ -5,12 +5,25 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"sync"
 	"time"
 
+	"gokv/internal/hashring"
 	"gokv/internal/storage"
 	"gokv/proto/commonpb"
 	"gokv/proto/internalpb"
 )
+
+type RebalanceManager struct {
+	Mu       sync.Mutex
+	Timer    *time.Timer
+	Debounce time.Duration
+	LastRing *hashring.HashRing
+}
+
+func NewRebalanceManager(debounce time.Duration) *RebalanceManager {
+	return &RebalanceManager{Debounce: debounce}
+}
 
 // Batch streams commands to new owners
 func (cm *ClusterManager) rebalanceCommands(nodeID string, commands []*commonpb.CommandRequest) {
@@ -48,26 +61,26 @@ func (cm *ClusterManager) Rebalance() {
 	cm.Mu.Lock()
 	defer cm.Mu.Unlock()
 
-	if cm.rebalanceTimer != nil {
-		cm.rebalanceTimer.Stop()
+	if cm.RebalanceManager.Timer != nil {
+		cm.RebalanceManager.Timer.Stop()
 	}
 
-	cm.rebalanceTimer = time.AfterFunc(cm.rebalanceDebounce, cm.runRebalance)
+	cm.RebalanceManager.Timer = time.AfterFunc(cm.RebalanceManager.Debounce, cm.runRebalance)
 }
 
 func (cm *ClusterManager) runRebalance() {
-	cm.rebalanceMu.Lock()
-	defer cm.rebalanceMu.Unlock()
+	cm.RebalanceManager.Mu.Lock()
+	defer cm.RebalanceManager.Mu.Unlock()
 
-	oldRing := cm.LastRebalancedRing
+	oldRing := cm.RebalanceManager.LastRing
 	newRing := cm.HashRing
 
-	if cm.LastRebalancedRing.GetVersion() == cm.HashRing.GetVersion() {
+	if newRing.GetVersion() == oldRing.GetVersion() {
 		return
 	}
 
 	cm.Mu.Lock()
-	cm.LastRebalancedRing = cm.HashRing.Copy()
+	cm.RebalanceManager.LastRing = newRing.Copy()
 	cm.Mu.Unlock()
 
 	slog.Info("rebalance: started")

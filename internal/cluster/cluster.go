@@ -29,19 +29,16 @@ import (
 
 // ClusterManager manages the cluster state, including node information, peer list, data store, and hash ring.
 type ClusterManager struct {
-	Mu                 sync.RWMutex
-	NodeID             string                    // ID of the current node.
-	NodeInternalAddr   string                    // Address of the current node.
-	NodeExternalAddr   string                    //
-	PeerMap            map[string]*Peer          // Map of nodes in the cluster.
-	HashRing           *hashring.HashRing        // Consistent hashing implementation.
-	ConnPool           *pool.GrpcConnectionPool  // Connection pool for gRPC clients.
-	DataStore          *storage.DataStore        // In-memory data store.
-	CommandRegistry    *registry.CommandRegistry // Registry for supported commands.
-	LastRebalancedRing *hashring.HashRing        // Ring used for the last rebalance (avoids multiple reblance calls)
-	rebalanceMu        sync.Mutex
-	rebalanceTimer     *time.Timer
-	rebalanceDebounce  time.Duration
+	Mu               sync.RWMutex
+	NodeID           string                    // ID of the current node.
+	NodeInternalAddr string                    // Address of the current node.
+	NodeExternalAddr string                    //
+	PeerMap          map[string]*Peer          // Map of nodes in the cluster.
+	HashRing         *hashring.HashRing        // Consistent hashing implementation.
+	ConnPool         *pool.GrpcConnectionPool  // Connection pool for gRPC clients.
+	DataStore        *storage.DataStore        // In-memory data store.
+	CommandRegistry  *registry.CommandRegistry // Registry for supported commands.
+	RebalanceManager *RebalanceManager
 }
 
 type Peer struct {
@@ -56,6 +53,7 @@ type Peer struct {
 func NewClusterManager(env *environment.Environment, cfg *config.Config) *ClusterManager {
 	cr := registry.NewCommandRegistry()
 	ds := storage.NewDataStore(cfg.CleanupInterval)
+	rm := NewRebalanceManager(cfg.RebalanceDebounce)
 	peerMap := make(map[string]*Peer)
 	hashRing := hashring.New(cfg.VNodeCount, cfg.Replicas)
 	connPool := pool.NewGrpcConnectionPool(func(address string) (*grpc.ClientConn, error) {
@@ -95,11 +93,11 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 		ConnPool:         connPool,
 		DataStore:        ds,
 		CommandRegistry:  cr,
-		rebalanceDebounce: cfg.RebalanceDebounce,
+		RebalanceManager: rm,
 	}
 
 	cm.HashRing.Add(cm.NodeID)
-	cm.LastRebalancedRing = cm.HashRing.Copy()
+	cm.RebalanceManager.LastRing = cm.HashRing.Copy()
 
 	// Register general commands
 	cr.Register("DEL", registry.Command{Run: cm.Del, Replicate: true})
