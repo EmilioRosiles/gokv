@@ -129,7 +129,10 @@ func (cm *ClusterManager) LoadSnapshop(env *environment.Environment) {
 			continue
 		}
 
-		cm.RunLocalCommand(&cmd)
+		responsibleNodeIDs := cm.HashRing.Get(cmd.Key)
+		if cm.NodeID == responsibleNodeIDs[0] {
+			cm.RunLocalCommand(&cmd)
+		}
 	}
 
 	slog.Debug("snapshot: snapshot loaded")

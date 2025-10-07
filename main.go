@@ -26,7 +26,6 @@ func main() {
 	cfg := config.LoadConfig(env)
 
 	cm := cluster.NewClusterManager(env, cfg)
-	cm.LoadSnapshop(env)
 
 	go grpc.StartInternalServer(env, cm)
 
@@ -44,6 +43,10 @@ func main() {
 			cm.AddNode(nodeID, internalAddr, "")
 		}
 		cm.Heartbeat(cm.GetRandomAlivePeers(cm.AlivePeers())...)
+	}
+
+	if cfg.Persistence.RestoreOnStartup == "always" || (cfg.Persistence.RestoreOnStartup == "auto" && cfg.Cluster.Replicas <= 1) {
+		cm.LoadSnapshop(env)
 	}
 
 	go cm.StartHeartbeat(cfg)

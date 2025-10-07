@@ -29,6 +29,7 @@ type Rebalance struct {
 
 type Persistence struct {
 	PersistenceInterval time.Duration `yaml:"persistence_interval"`
+	RestoreOnStartup    string        `yaml:"restore_on_startup"`
 }
 
 type Maintance struct {
@@ -60,6 +61,7 @@ func Default() *Config {
 		},
 		Persistence: Persistence{
 			PersistenceInterval: 10 * time.Second,
+			RestoreOnStartup:    "auto",
 		},
 		Maintance: Maintance{
 			CleanupInterval: 10 * time.Second,
