@@ -77,8 +77,6 @@ services:
       GOKV_EXTERNAL_GRPC_ADVERTISE_ADDR: "localhost:50052"
       GOKV_EXTERNAL_REST_BIND_ADDR: "0.0.0.0:8080"
       GOKV_EXTERNAL_REST_ADVERTISE_ADDR: "localhost:8081"
-    depends_on:
-      - gokv1
 
   gokv3:
     <<: *gokv-base
@@ -108,8 +106,6 @@ services:
       GOKV_EXTERNAL_GRPC_ADVERTISE_ADDR: "localhost:50053"
       GOKV_EXTERNAL_REST_BIND_ADDR: "0.0.0.0:8080"
       GOKV_EXTERNAL_REST_ADVERTISE_ADDR: "localhost:8082"
-    depends_on:
-      - gokv1
 
 networks:
   gokv-cluster:
