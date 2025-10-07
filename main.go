@@ -44,7 +44,6 @@ func main() {
 			cm.AddNode(nodeID, internalAddr, "")
 		}
 		cm.Heartbeat(cm.GetRandomAlivePeers(cm.AlivePeers())...)
-		go cm.Rebalance()
 	}
 
 	go cm.StartHeartbeat(cfg)

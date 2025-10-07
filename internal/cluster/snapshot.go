@@ -18,7 +18,7 @@ import (
 )
 
 func (cm *ClusterManager) StartSnapshop(env *environment.Environment, cfg *config.Config) {
-	if cfg.PersistenceInterval == 0 {
+	if cfg.Persistence.PersistenceInterval == 0 {
 		slog.Info("snapshot: disabled")
 		return
 	}
@@ -28,7 +28,7 @@ func (cm *ClusterManager) StartSnapshop(env *environment.Environment, cfg *confi
 		return
 	}
 
-	ticker := time.NewTicker(cfg.PersistenceInterval)
+	ticker := time.NewTicker(cfg.Persistence.PersistenceInterval)
 	done := make(chan bool)
 
 	for {

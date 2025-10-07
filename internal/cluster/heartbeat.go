@@ -13,18 +13,18 @@ import (
 
 // StartHeartbeat starts the heartbeat process to periodically send heartbeats to other nodes.
 func (cm *ClusterManager) StartHeartbeat(cfg *config.Config) {
-	if cfg.HeartbeatInterval == 0 {
+	if cfg.Messaging.HeartbeatInterval == 0 {
 		slog.Info("heartbeat: disabled")
 		return
 	}
 
-	interval := cfg.HeartbeatInterval
+	interval := cfg.Messaging.HeartbeatInterval
 	jitterRange := time.Duration(float64(interval) * 0.25)
 	for {
 		jitter := time.Duration(rand.Int63n(int64(jitterRange)*2)) - jitterRange
 		time.Sleep(interval + jitter)
 
-		gossipTargets := cm.GetRandomAlivePeers(cfg.GossipPeerCount)
+		gossipTargets := cm.GetRandomAlivePeers(cfg.Messaging.GossipPeerCount)
 		cm.Heartbeat(gossipTargets...)
 		go cm.Rebalance()
 	}

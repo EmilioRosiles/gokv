@@ -11,29 +11,59 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type Config struct {
-	CleanupInterval     time.Duration `yaml:"cleanup_interval"`
-	HeartbeatInterval   time.Duration `yaml:"heartbeat_interval"`
-	GossipPeerCount     int           `yaml:"gossip_peer_count"`
-	VNodeCount          int           `yaml:"v_node_count"`
-	MessageTimeout      time.Duration `yaml:"message_timeout"`
-	Replicas            int           `yaml:"replicas"`
-	MessageRetry        int           `yaml:"message_retry"`
+type Cluster struct {
+	VNodeCount int `yaml:"v_node_count"`
+	Replicas   int `yaml:"replicas"`
+}
+
+type Messaging struct {
+	GossipPeerCount   int           `yaml:"gossip_peer_count"`
+	MessageTimeout    time.Duration `yaml:"message_timeout"`
+	MessageRetry      int           `yaml:"message_retry"`
+	HeartbeatInterval time.Duration `yaml:"heartbeat_interval"`
+}
+
+type Rebalance struct {
+	RebalanceDebounce time.Duration `yaml:"rebalance_debounce"`
+}
+
+type Persistence struct {
 	PersistenceInterval time.Duration `yaml:"persistence_interval"`
-	RebalanceDebounce   time.Duration `yaml:"rebalance_debounce"`
+}
+
+type Maintance struct {
+	CleanupInterval time.Duration `yaml:"cleanup_interval"`
+}
+
+type Config struct {
+	Cluster     Cluster     `yaml:"cluster"`
+	Messaging   Messaging   `yaml:"messaging"`
+	Rebalance   Rebalance   `yaml:"rebalance"`
+	Persistence Persistence `yaml:"persistence"`
+	Maintance   Maintance   `yaml:"maintance"`
 }
 
 func Default() *Config {
 	return &Config{
-		CleanupInterval:     10 * time.Second,
-		HeartbeatInterval:   3 * time.Second,
-		GossipPeerCount:     2,
-		VNodeCount:          100,
-		MessageTimeout:      1 * time.Second,
-		Replicas:            2,
-		MessageRetry:        3,
-		PersistenceInterval: 10 * time.Second,
-		RebalanceDebounce:   1 * time.Second,
+		Cluster: Cluster{
+			VNodeCount: 100,
+			Replicas:   2,
+		},
+		Messaging: Messaging{
+			GossipPeerCount:   2,
+			MessageTimeout:    1 * time.Second,
+			MessageRetry:      3,
+			HeartbeatInterval: 3 * time.Second,
+		},
+		Rebalance: Rebalance{
+			RebalanceDebounce: 1 * time.Second,
+		},
+		Persistence: Persistence{
+			PersistenceInterval: 10 * time.Second,
+		},
+		Maintance: Maintance{
+			CleanupInterval: 10 * time.Second,
+		},
 	}
 }
 
