@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"time"
 
 	"gokv/internal/storage"
 	"gokv/proto/commonpb"
@@ -44,6 +45,20 @@ func (cm *ClusterManager) rebalanceCommands(nodeID string, commands []*commonpb.
 
 // Rebalance redistributes keys across the cluster when the state changes.
 func (cm *ClusterManager) Rebalance() {
+	cm.Mu.Lock()
+	defer cm.Mu.Unlock()
+
+	if cm.rebalanceTimer != nil {
+		cm.rebalanceTimer.Stop()
+	}
+
+	cm.rebalanceTimer = time.AfterFunc(cm.rebalanceDebounce, cm.runRebalance)
+}
+
+func (cm *ClusterManager) runRebalance() {
+	cm.rebalanceMu.Lock()
+	defer cm.rebalanceMu.Unlock()
+
 	oldRing := cm.LastRebalancedRing
 	newRing := cm.HashRing
 

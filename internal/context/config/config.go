@@ -20,6 +20,7 @@ type Config struct {
 	Replicas            int           `yaml:"replicas"`
 	MessageRetry        int           `yaml:"message_retry"`
 	PersistenceInterval time.Duration `yaml:"persistence_interval"`
+	RebalanceDebounce   time.Duration `yaml:"rebalance_debounce"`
 }
 
 func Default() *Config {
@@ -32,6 +33,7 @@ func Default() *Config {
 		Replicas:            2,
 		MessageRetry:        3,
 		PersistenceInterval: 10 * time.Second,
+		RebalanceDebounce:   1 * time.Second,
 	}
 }
 
