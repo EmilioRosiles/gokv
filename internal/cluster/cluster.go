@@ -29,16 +29,16 @@ import (
 
 // ClusterManager manages the cluster state, including node information, peer list, data store, and hash ring.
 type ClusterManager struct {
-	Mu                 sync.RWMutex
-	NodeID             string                    // ID of the current node.
-	NodeInternalAddr   string                    // Address of the current node.
-	NodeExternalAddr   string                    //
-	PeerMap            map[string]*Peer          // Map of nodes in the cluster.
-	HashRing           *hashring.HashRing        // Consistent hashing implementation.
-	ConnPool           *pool.GrpcConnectionPool  // Connection pool for gRPC clients.
-	DataStore          *storage.DataStore        // In-memory data store.
-	CommandRegistry    *registry.CommandRegistry // Registry for supported commands.
-	LastRebalancedRing *hashring.HashRing        // Ring used for the last rebalance (avoids multiple reblance calls)
+	Mu               sync.RWMutex
+	NodeID           string                    // ID of the current node.
+	NodeInternalAddr string                    // Address of the current node.
+	NodeExternalAddr string                    //
+	PeerMap          map[string]*Peer          // Map of nodes in the cluster.
+	HashRing         *hashring.HashRing        // Consistent hashing implementation.
+	ConnPool         *pool.GrpcConnectionPool  // Connection pool for gRPC clients.
+	DataStore        *storage.DataStore        // In-memory data store.
+	CommandRegistry  *registry.CommandRegistry // Registry for supported commands.
+	RebalanceManager *RebalanceManager
 }
 
 type Peer struct {
@@ -52,9 +52,10 @@ type Peer struct {
 // NewClusterManager creates and initializes a new ClusterManager.
 func NewClusterManager(env *environment.Environment, cfg *config.Config) *ClusterManager {
 	cr := registry.NewCommandRegistry()
-	ds := storage.NewDataStore(cfg.CleanupInterval)
+	ds := storage.NewDataStore(cfg.Maintance.CleanupInterval)
+	rm := NewRebalanceManager(cfg.Rebalance.RebalanceDebounce)
 	peerMap := make(map[string]*Peer)
-	hashRing := hashring.New(cfg.VNodeCount, cfg.Replicas)
+	hashRing := hashring.New(cfg.Cluster.VNodeCount, cfg.Cluster.Replicas)
 	connPool := pool.NewGrpcConnectionPool(func(address string) (*grpc.ClientConn, error) {
 		creds := insecure.NewCredentials()
 		if env.InternalTlsClientCertPath != "" || env.InternalTlsClientKeyPath != "" {
@@ -74,11 +75,11 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 
 		return grpc.NewClient(address,
 			grpc.WithTransportCredentials(creds),
-			grpc.WithConnectParams(grpc.ConnectParams{MinConnectTimeout: cfg.MessageTimeout}),
+			grpc.WithConnectParams(grpc.ConnectParams{MinConnectTimeout: cfg.Messaging.MessageTimeout}),
 			grpc.WithUnaryInterceptor(retry.UnaryClientInterceptor(
-				retry.WithMax(uint(cfg.MessageRetry)),
-				retry.WithCodes(codes.Internal),
-				retry.WithPerRetryTimeout(cfg.MessageTimeout),
+				retry.WithMax(uint(cfg.Messaging.MessageRetry)),
+				retry.WithCodes(codes.Internal, codes.Unavailable),
+				retry.WithPerRetryTimeout(cfg.Messaging.MessageTimeout),
 			)),
 		)
 	})
@@ -92,10 +93,11 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 		ConnPool:         connPool,
 		DataStore:        ds,
 		CommandRegistry:  cr,
+		RebalanceManager: rm,
 	}
 
 	cm.HashRing.Add(cm.NodeID)
-	cm.LastRebalancedRing = cm.HashRing.Copy()
+	cm.RebalanceManager.LastRing = cm.HashRing.Copy()
 
 	// Register general commands
 	cr.Register("DEL", registry.Command{Run: cm.Del, Replicate: true})
@@ -114,6 +116,7 @@ func NewClusterManager(env *environment.Environment, cfg *config.Config) *Cluste
 	cr.Register("RPUSH", registry.Command{Run: cm.RPush, Replicate: true})
 	cr.Register("RPOP", registry.Command{Run: cm.RPop, Replicate: true})
 	cr.Register("LLEN", registry.Command{Run: cm.LLen})
+	cr.Register("LSET", registry.Command{Run: cm.LSet, Replicate: true})
 
 	slog.Debug(fmt.Sprintf("cluster manager: created cluster manager for node: %s", cm.NodeID))
 	return cm
@@ -165,6 +168,7 @@ func (cm *ClusterManager) RemoveNode(nodeID string) {
 	if peer, ok := cm.PeerMap[nodeID]; ok {
 		cm.ConnPool.Close(peer.NodeInternalAddr)
 		cm.PeerMap[nodeID].Alive = false
+		cm.PeerMap[nodeID].LastSeen = time.Now()
 		cm.HashRing.Remove(nodeID)
 		slog.Warn(fmt.Sprintf("cluster manager: removed peer from cluster: %s", nodeID))
 	}

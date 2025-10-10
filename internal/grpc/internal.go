@@ -68,12 +68,7 @@ func StartInternalServer(env *environment.Environment, cm *cluster.ClusterManage
 func (s *internalServer) Heartbeat(ctx context.Context, req *internalpb.HeartbeatRequest) (*internalpb.HeartbeatResponse, error) {
 	// slog.Debug("gRPC internal: received heartbeat")
 	s.cm.MergeState(req.Peers)
-	if s.cm.LastRebalancedRing.GetVersion() != s.cm.HashRing.GetVersion() {
-		go s.cm.Rebalance(s.cm.LastRebalancedRing, s.cm.HashRing)
-		s.cm.Mu.Lock()
-		s.cm.LastRebalancedRing = s.cm.HashRing.Copy()
-		s.cm.Mu.Unlock()
-	}
+	go s.cm.Rebalance()
 
 	s.cm.Mu.RLock()
 	self := &internalpb.HeartbeatNode{
@@ -117,7 +112,7 @@ func (s *internalServer) ForwardCommand(ctx context.Context, req *commonpb.Comma
 	var res *commonpb.CommandResponse
 	var err error
 	if slices.Contains(responsibleNodeIDs, s.cm.NodeID) {
-		res, err = s.cm.RunLocalCommand(ctx, req)
+		res, err = s.cm.RunLocalCommand(req)
 	} else {
 		err = status.Errorf(codes.Internal, "node %s not responsible for forwarded command %s %s", req.Command, s.cm.NodeID, req.Key)
 	}
@@ -132,7 +127,6 @@ func (s *internalServer) ForwardCommand(ctx context.Context, req *commonpb.Comma
 // Rebalance handles key migration to rebalance the cluster when the state changes
 func (s *internalServer) Rebalance(stream internalpb.InternalServer_RebalanceServer) error {
 	slog.Debug("gRPC internal: received cluster rebalance")
-	ctx := stream.Context()
 
 	for {
 		req, err := stream.Recv()
@@ -149,7 +143,7 @@ func (s *internalServer) Rebalance(stream internalpb.InternalServer_RebalanceSer
 		for _, command := range req.Commands {
 			responsibleNodeIDs := s.cm.HashRing.Get(command.Key)
 			if slices.Contains(responsibleNodeIDs, s.cm.NodeID) {
-				_, err = s.cm.RunLocalCommand(ctx, command)
+				_, err = s.cm.RunLocalCommand(command)
 			} else {
 				err = status.Errorf(codes.DataLoss, "node %v not responsible for command %s %s", s.cm.NodeID, command.Command, command.Key)
 			}

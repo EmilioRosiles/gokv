@@ -15,7 +15,7 @@ import (
 )
 
 // main is the entry point of the gokv application.
-// It initializes the cluster manager, starts the gRPC server, and handles graceful shutdown.
+// It initializes the cluster manager, APIs, gossip and snapshots.
 func main() {
 	env := environment.LoadEnvironment()
 
@@ -25,36 +25,35 @@ func main() {
 	slog.Info(fmt.Sprintf("main: starting node: %s", env.NodeID))
 	cfg := config.LoadConfig(env)
 
-	// Create a new cluster manager.
 	cm := cluster.NewClusterManager(env, cfg)
 
-	// Start the gRPC/REST internal and external servers.
 	go grpc.StartInternalServer(env, cm)
+
 	if env.ExternalGrpcBindAddr != "" {
 		go grpc.StartExternalServer(env, cm)
 	}
+
 	if env.ExternalRestBindAddr != "" {
 		go rest.StartRESTServer(env, cm)
 	}
 
-	// If seed nodes are provided, add it to the cluster, send heartbeat, and trigger initial rebalance.
+	// If seed nodes are provided, add them to the cluster, send heartbeat, and trigger initial rebalance.
 	if len(env.ClusterSeeds) > 0 {
 		for nodeID, internalAddr := range env.ClusterSeeds {
 			cm.AddNode(nodeID, internalAddr, "")
 		}
 		cm.Heartbeat(cm.GetRandomAlivePeers(cm.AlivePeers())...)
-		if cm.LastRebalancedRing.GetVersion() != cm.HashRing.GetVersion() {
-			go cm.Rebalance(cm.LastRebalancedRing, cm.HashRing)
-			cm.Mu.Lock()
-			cm.LastRebalancedRing = cm.HashRing.Copy()
-			cm.Mu.Unlock()
-		}
 	}
 
-	// Start the heartbeat process in a new goroutine.
-	go cm.StartHeartbeat(cfg)
+	if cfg.Persistence.RestoreOnStartup == config.Always ||
+		(cfg.Persistence.RestoreOnStartup == config.Auto && cfg.Cluster.Replicas == 0) {
+		slog.Info("main: restoring from snapshop")
+		cm.LoadSnapshot(env)
+	}
 
-	// Wait for a shutdown signal.
+	go cm.StartHeartbeat(cfg)
+	go cm.StartSnapshot(env, cfg)
+
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 

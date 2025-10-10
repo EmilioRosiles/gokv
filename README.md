@@ -77,6 +77,7 @@ A command-line interface (CLI) tool is available for interacting with the cluste
 *   `RPUSH <key> <value...>`: Append one or more values to a list.
 *   `RPOP <key> <count>`: Remove and get the last `count` elements from a list.
 *   `LLEN <key>`: Get the length of a list.
+*   `LSET <key> <value...>`: Creates a list, replaces if it already exists (Equivalent to running DEL + RPUSH).
 
 ### Running with TLS (Optional)
 
@@ -174,14 +175,40 @@ The following env variables can be used to configure a `gokv` node:
 
 The following config variables can be used to configure a `gokv` cluster:
 
-| Variable            | Description                                     |  Default  |
-| ------------------- | ----------------------------------------------- |  -------  |
-| `cleanup_interval`  | Interval for cleaning up expired key            | `10s`     |
-| `heartbeat_interval`| Interval for gossip heartbeats.                 | `5s`      |
-| `gossip_peer_count` | Number of peers to gossip to.                   | `2`       |
-| `v_node_count`      | Number of virtual nodes in the hashring.        | `3`       |
-| `message_timeout`   | Timeout of grpc messages.                       | `5s`      |
-| `replicas`          | Number of replicas in the cluster.              | `2`       |
+#### Cluster
+
+| Variable       | Description                              | Default |
+| -------------- | ---------------------------------------- | ------- |
+| `v_node_count` | Number of virtual nodes in the hashring. | `100`   |
+| `replicas`     | Number of replicas in the cluster.       | `1`     |
+
+#### Messaging
+
+| Variable             | Description                     | Default  |
+| -------------------- | ------------------------------- | -------- |
+| `gossip_peer_count`  | Number of peers to gossip to.   | `2`      |
+| `message_timeout`    | Timeout of grpc messages.       | `1s`     |
+| `message_retry`      | Number of retries for messages. | `3`      |
+| `heartbeat_interval` | Interval for gossip heartbeats. | `3s`     |
+
+#### Rebalance
+
+| Variable              | Description                                  | Default |
+| --------------------- | -------------------------------------------- | ------- |
+| `rebalance_debounce`  | Debounce time for rebalancing the cluster.   | `1s`    |
+
+#### Persistence
+
+| Variable              | Description                                                                 | Default  |
+| --------------------- | --------------------------------------------------------------------------- | -------- |
+| `persistence_interval`| Interval for persisting data to disk.                                       | `1m`     |
+| `restore_on_startup`  | Strategy for restoring data on startup. Can be `always`, `never`, or `auto`.| `auto`   |
+
+#### Maintance
+
+| Variable           | Description                          | Default |
+| ------------------ | ------------------------------------ | ------- |
+| `cleanup_interval` | Interval for cleaning up expired key | `10s`   |
 
 ## gRPC API
 

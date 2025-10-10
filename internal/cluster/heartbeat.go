@@ -13,35 +13,35 @@ import (
 
 // StartHeartbeat starts the heartbeat process to periodically send heartbeats to other nodes.
 func (cm *ClusterManager) StartHeartbeat(cfg *config.Config) {
-	interval := cfg.HeartbeatInterval
+	if cfg.Messaging.HeartbeatInterval == 0 {
+		slog.Info("heartbeat: disabled")
+		return
+	}
+
+	interval := cfg.Messaging.HeartbeatInterval
 	jitterRange := time.Duration(float64(interval) * 0.25)
 	for {
 		jitter := time.Duration(rand.Int63n(int64(jitterRange)*2)) - jitterRange
 		time.Sleep(interval + jitter)
 
-		gossipTargets := cm.GetRandomAlivePeers(cfg.GossipPeerCount)
+		gossipTargets := cm.GetRandomAlivePeers(cfg.Messaging.GossipPeerCount)
 		cm.Heartbeat(gossipTargets...)
-		if cm.LastRebalancedRing.GetVersion() != cm.HashRing.GetVersion() {
-			go cm.Rebalance(cm.LastRebalancedRing, cm.HashRing)
-			cm.Mu.Lock()
-			cm.LastRebalancedRing = cm.HashRing.Copy()
-			cm.Mu.Unlock()
-		}
+		go cm.Rebalance()
 	}
 }
 
 // Heartbeat sends a heartbeat to a list of peers to sync cluster state.
 func (cm *ClusterManager) Heartbeat(peerList ...*Peer) {
 	if len(peerList) == 0 {
-		slog.Debug("cluster manager: skipping heartbeat, no peers found")
+		slog.Debug("heartbeat: skipping, no peers found")
 		return
 	}
 
-	slog.Debug(fmt.Sprintf("cluster manager: sending heartbeat to %d peers", len(peerList)))
+	slog.Debug(fmt.Sprintf("heartbeat: sending to %d peers", len(peerList)))
 	for _, peerToCheck := range peerList {
 		client, ok := cm.GetPeerClient(peerToCheck.NodeID)
 		if !ok {
-			slog.Warn(fmt.Sprintf("cluster manager: heartbeat failed for peer %s, client not found, removing from cluster", peerToCheck.NodeID))
+			slog.Warn(fmt.Sprintf("heartbeat: failed for peer %s, client not found, removing from cluster", peerToCheck.NodeID))
 			cm.RemoveNode(peerToCheck.NodeID)
 			continue
 		}
@@ -71,10 +71,10 @@ func (cm *ClusterManager) Heartbeat(peerList ...*Peer) {
 
 		res, err := client.Heartbeat(context.Background(), req)
 		if err != nil {
-			slog.Warn(fmt.Sprintf("cluster manager: heartbeat failed for peer %s, removing from cluster: %v", peerToCheck.NodeID, err))
+			slog.Warn(fmt.Sprintf("heartbeat: failed for peer %s, removing from cluster: %v", peerToCheck.NodeID, err))
 			cm.RemoveNode(peerToCheck.NodeID)
 		} else {
-			slog.Debug(fmt.Sprintf("cluster manager: heartbeat check successful for peer %s", peerToCheck.NodeID))
+			slog.Debug(fmt.Sprintf("heartbeat: check successful for peer %s", peerToCheck.NodeID))
 			cm.MergeState(res.Peers)
 		}
 	}

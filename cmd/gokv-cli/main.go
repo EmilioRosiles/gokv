@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var (
@@ -115,11 +116,14 @@ func init() {
 }
 
 func createConnection() (*grpc.ClientConn, error) {
-	tlsCfg, err := tls.BuildClientTLSConfig(ca, "", "", uri)
-	if err != nil {
-		return nil, err
+	creds := insecure.NewCredentials()
+	if ca != "" {
+		tlsCfg, err := tls.BuildClientTLSConfig(ca, "", "", uri)
+		if err != nil {
+			return nil, err
+		}
+		creds = credentials.NewTLS(tlsCfg)
 	}
-	creds := credentials.NewTLS(tlsCfg)
 
 	return grpc.NewClient(uri,
 		grpc.WithTransportCredentials(creds),
