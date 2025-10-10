@@ -27,9 +27,17 @@ type Rebalance struct {
 	RebalanceDebounce time.Duration `yaml:"rebalance_debounce"`
 }
 
+type RestoreStrategy string
+
+const (
+	Always RestoreStrategy = "always"
+	Never  RestoreStrategy = "never"
+	Auto   RestoreStrategy = "auto"
+)
+
 type Persistence struct {
-	PersistenceInterval time.Duration `yaml:"persistence_interval"`
-	RestoreOnStartup    bool          `yaml:"restore_on_startup"`
+	PersistenceInterval time.Duration   `yaml:"persistence_interval"`
+	RestoreOnStartup    RestoreStrategy `yaml:"restore_on_startup"`
 }
 
 type Maintance struct {
@@ -48,7 +56,7 @@ func Default() *Config {
 	return &Config{
 		Cluster: Cluster{
 			VNodeCount: 100,
-			Replicas:   2,
+			Replicas:   1,
 		},
 		Messaging: Messaging{
 			GossipPeerCount:   2,
@@ -60,8 +68,8 @@ func Default() *Config {
 			RebalanceDebounce: 1 * time.Second,
 		},
 		Persistence: Persistence{
-			PersistenceInterval: 10 * time.Second,
-			RestoreOnStartup:    true,
+			PersistenceInterval: 1 * time.Minute,
+			RestoreOnStartup:    Auto,
 		},
 		Maintance: Maintance{
 			CleanupInterval: 10 * time.Second,

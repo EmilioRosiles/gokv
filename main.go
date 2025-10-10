@@ -45,12 +45,14 @@ func main() {
 		cm.Heartbeat(cm.GetRandomAlivePeers(cm.AlivePeers())...)
 	}
 
-	if cfg.Persistence.RestoreOnStartup {
-		cm.LoadSnapshop(env)
+	if cfg.Persistence.RestoreOnStartup == config.Always ||
+		(cfg.Persistence.RestoreOnStartup == config.Auto && cfg.Cluster.Replicas == 0) {
+		slog.Info("main: restoring from snapshop")
+		cm.LoadSnapshot(env)
 	}
 
 	go cm.StartHeartbeat(cfg)
-	go cm.StartSnapshop(env, cfg)
+	go cm.StartSnapshot(env, cfg)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)

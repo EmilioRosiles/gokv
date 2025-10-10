@@ -17,7 +17,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (cm *ClusterManager) StartSnapshop(env *environment.Environment, cfg *config.Config) {
+func (cm *ClusterManager) StartSnapshot(env *environment.Environment, cfg *config.Config) {
 	if cfg.Persistence.PersistenceInterval == 0 {
 		slog.Info("snapshot: disabled")
 		return
@@ -87,8 +87,9 @@ func (cm *ClusterManager) snapshot(env *environment.Environment) {
 	slog.Debug("snapshot: snapshot created")
 }
 
-func (cm *ClusterManager) LoadSnapshop(env *environment.Environment) {
+func (cm *ClusterManager) LoadSnapshot(env *environment.Environment) {
 	if env.PersistencePath == "" {
+		slog.Warn("snapshot: file path not found")
 		return
 	}
 

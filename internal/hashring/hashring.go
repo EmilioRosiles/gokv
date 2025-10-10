@@ -6,6 +6,7 @@ import (
 	"hash"
 	"hash/fnv"
 	"log/slog"
+	"os"
 	"sort"
 	"strconv"
 	"sync"
@@ -28,6 +29,11 @@ type HashRing struct {
 
 // Creates new hashring
 func New(vNodeCount int, replicas int) *HashRing {
+	if replicas < 0 {
+		slog.Error("hashring: invalid number of replicas")
+		os.Exit(1)
+	}
+
 	return &HashRing{
 		vNodeCount: vNodeCount,
 		Replicas:   replicas,
@@ -84,11 +90,11 @@ func (h *HashRing) Get(key string) []string {
 		idx = 0
 	}
 
-	uniqueNodes := make([]string, 0, h.Replicas)
+	uniqueNodes := make([]string, 0, h.Replicas+1)
 	seen := make(map[string]struct{})
 
 	i := idx
-	for len(uniqueNodes) < h.Replicas && len(seen) < len(h.vNodes)/h.vNodeCount {
+	for len(uniqueNodes) < h.Replicas+1 && len(seen) < len(h.vNodes)/h.vNodeCount {
 		vNode := h.vNodes[i]
 		if _, exists := seen[vNode.nodeID]; !exists {
 			seen[vNode.nodeID] = struct{}{}

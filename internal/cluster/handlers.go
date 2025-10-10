@@ -43,7 +43,7 @@ func (cm *ClusterManager) RunCommand(ctx context.Context, req *commonpb.CommandR
 		}
 	}
 
-	if cmd.Replicate && cm.HashRing.Replicas > 1 {
+	if cmd.Replicate && cm.HashRing.Replicas > 0 {
 		go cm.ReplicateCommand(req)
 	}
 
