@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/reflection"
 )
 
 // externalServer is gRPC server intended to be used by client applications.
@@ -55,6 +56,7 @@ func StartExternalServer(env *environment.Environment, cm *cluster.ClusterManage
 	grpcServer := grpc.NewServer(grpc.Creds(creds))
 	serverImplementation := &externalServer{cm: cm}
 	externalpb.RegisterExternalServerServer(grpcServer, serverImplementation)
+	reflection.Register(grpcServer)
 	slog.Info(fmt.Sprintf("gRPC external: starting on %s", env.ExternalGrpcBindAddr))
 	grpcServer.Serve(lis)
 }
