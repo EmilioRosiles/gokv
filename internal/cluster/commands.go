@@ -447,3 +447,25 @@ func (cm *ClusterManager) LSet(listName string, args ...[]byte) (*commonpb.Comma
 	response := commonpb.CommandResponse{Response: b}
 	return &response, nil
 }
+
+func (cm *ClusterManager) LSet(listName string, args ...[]byte) (*commonpb.CommandResponse, error) {
+	if listName == "" || len(args) == 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "LSET: requires 2 or more arguments: name, value [value ...]")
+	}
+
+	store, ok := cm.DataStore.Get(listName)
+	if ok {
+		if store.Type() != storage.List {
+			return nil, status.Errorf(codes.FailedPrecondition, "LSET: invalid data structure found")
+		}
+		cm.DataStore.Del(listName)
+	}
+
+	store = storage.NewList()
+	cm.DataStore.Set(listName, store)
+
+	store.(*storage.ListMap).PushBack(args...)
+
+	response := commonpb.CommandResponse{Response: commonpb.NewBool(true)}
+	return &response, nil
+}
