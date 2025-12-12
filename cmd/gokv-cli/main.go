@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"time"
+	"unicode/utf8"
 
 	"gokv/internal/tls"
 	"gokv/proto/commonpb"
@@ -103,6 +104,8 @@ var runCmd = &cobra.Command{
 			result = nil
 		}
 
+		result = convertBytesToStrings(result)
+
 		jsonValue, err := json.MarshalIndent(result, "", "  ")
 		if err != nil {
 			log.Fatalf("Failed to marshal json for printing: %v", err)
@@ -111,6 +114,30 @@ var runCmd = &cobra.Command{
 		fmt.Print(string(jsonValue))
 		fmt.Print("\n")
 	},
+}
+
+func convertBytesToStrings(data any) any {
+	switch v := data.(type) {
+	case map[string]any:
+		newMap := make(map[string]any, len(v))
+		for key, val := range v {
+			newMap[key] = convertBytesToStrings(val)
+		}
+		return newMap
+	case []any:
+		newSlice := make([]any, len(v))
+		for i, val := range v {
+			newSlice[i] = convertBytesToStrings(val)
+		}
+		return newSlice
+	case []byte:
+		if utf8.ValidString(string(v)) {
+			return string(v)
+		}
+		return v
+	default:
+		return v
+	}
 }
 
 func init() {
