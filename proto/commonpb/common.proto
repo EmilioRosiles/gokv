@@ -4,26 +4,6 @@ option go_package = "gokv/proto/commonpb;commonpb";
 
 package commonpb;
 
-message Value {
-  oneof kind {
-    bytes bytes = 1;
-    string str = 2;
-    int64 int = 3;
-    bool bool = 4;
-    ListValue list = 5;
-    MapValue map = 6;
-    bool nil = 7;
-  }
-}
-
-message ListValue {
-  repeated Value values = 1;
-}
-
-message MapValue {
-  map<string, Value> values = 1;
-}
-
 message CommandRequest {
   string command = 1;
   string key = 2;
@@ -31,5 +11,5 @@ message CommandRequest {
 }
 
 message CommandResponse {
-  Value response = 1;
+  bytes response = 1;
 }

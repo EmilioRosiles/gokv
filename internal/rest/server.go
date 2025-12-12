@@ -11,6 +11,8 @@ import (
 	"gokv/internal/cluster"
 	"gokv/internal/context/environment"
 	"gokv/proto/commonpb"
+
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 type CommandRequest struct {
@@ -69,7 +71,7 @@ func commandHandler(cm *cluster.ClusterManager) http.HandlerFunc {
 
 		slog.Debug(fmt.Sprintf("REST: received command %s %s", name, key))
 
-		resp, err := cm.RunCommand(r.Context(), &commonpb.CommandRequest{
+		res, err := cm.RunCommand(r.Context(), &commonpb.CommandRequest{
 			Command: name,
 			Key:     key,
 			Args:    args,
@@ -80,10 +82,15 @@ func commandHandler(cm *cluster.ClusterManager) http.HandlerFunc {
 			return
 		}
 
-		data, err := commonpb.ValueToInterface(resp.Response)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		var data any
+		if len(res.Response) > 0 {
+			err = msgpack.Unmarshal(res.Response, &data)
+			if err != nil {
+				http.Error(w, "Failed to unmarshal response data", http.StatusInternalServerError)
+				return
+			}
+		} else {
+			data = nil
 		}
 
 		w.Header().Set("Content-Type", "application/json")
