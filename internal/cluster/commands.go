@@ -8,9 +8,16 @@ import (
 	"gokv/internal/storage"
 	"gokv/proto/commonpb"
 
+	"github.com/vmihailenco/msgpack/v5"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+type ScanResponse struct {
+	NextCursor string
+	Count      int
+	Keys       []string
+}
 
 // Del removes a key from the DataStore.
 func (cm *ClusterManager) Del(key string, args ...[]byte) (*commonpb.CommandResponse, error) {
@@ -25,7 +32,11 @@ func (cm *ClusterManager) Del(key string, args ...[]byte) (*commonpb.CommandResp
 		count = 1
 	}
 
-	response := commonpb.CommandResponse{Response: commonpb.NewInt(int64(count))}
+	b, err := msgpack.Marshal(count)
+	if err != nil {
+		return nil, err
+	}
+	response := commonpb.CommandResponse{Response: b}
 	return &response, nil
 }
 
@@ -37,7 +48,11 @@ func (cm *ClusterManager) Expire(key string, args ...[]byte) (*commonpb.CommandR
 
 	store, ok := cm.DataStore.Get(key)
 	if !ok {
-		response := commonpb.CommandResponse{Response: commonpb.NewBool(false)}
+		b, err := msgpack.Marshal(false)
+		if err != nil {
+			return nil, err
+		}
+		response := commonpb.CommandResponse{Response: b}
 		return &response, nil
 	}
 
@@ -48,7 +63,11 @@ func (cm *ClusterManager) Expire(key string, args ...[]byte) (*commonpb.CommandR
 
 	store.SetTtl(ttl)
 
-	response := commonpb.CommandResponse{Response: commonpb.NewBool(true)}
+	b, err := msgpack.Marshal(true)
+	if err != nil {
+		return nil, err
+	}
+	response := commonpb.CommandResponse{Response: b}
 	return &response, nil
 }
 
@@ -85,17 +104,26 @@ func (cm *ClusterManager) Scan(cursorStr string, args ...[]byte) (*commonpb.Comm
 		}
 	}
 
-	data := make([]*commonpb.Value, 0)
+	keys := make([]string, 0)
 	cm.DataStore.Scan(cursor, count, func(hash string, store storage.Storable) {
 		responsibleNodeIDs := cm.HashRing.Get(hash)
 		if responsibleNodeIDs[0] == cm.NodeID {
-			data = append(data, commonpb.NewString(hash))
+			keys = append(keys, hash)
 		}
 	})
 
 	nextCursorStr := fmt.Sprintf("%v.%v", nextNodeIdx, nextCursor)
-	value := commonpb.NewCursor(nextCursorStr, len(data), commonpb.NewList(data...))
-	response := commonpb.CommandResponse{Response: value}
+	scanResponse := ScanResponse{
+		NextCursor: nextCursorStr,
+		Count:      len(keys),
+		Keys:       keys,
+	}
+
+	b, err := msgpack.Marshal(scanResponse)
+	if err != nil {
+		return nil, err
+	}
+	response := commonpb.CommandResponse{Response: b}
 	return &response, nil
 }
 
@@ -107,7 +135,11 @@ func (cm *ClusterManager) HGet(hash string, args ...[]byte) (*commonpb.CommandRe
 
 	store, ok := cm.DataStore.Get(hash)
 	if !ok {
-		response := commonpb.CommandResponse{Response: commonpb.NewNil()}
+		b, err := msgpack.Marshal(map[string][]byte{})
+		if err != nil {
+			return nil, err
+		}
+		response := commonpb.CommandResponse{Response: b}
 		return &response, nil
 	}
 
@@ -122,15 +154,16 @@ func (cm *ClusterManager) HGet(hash string, args ...[]byte) (*commonpb.CommandRe
 
 	entries := store.(*storage.HashMap).Get(keys...)
 
-	data := make(map[string]*commonpb.Value, len(entries))
-
-	i := 0
+	data := make(map[string][]byte, len(entries))
 	for key, entry := range entries {
-		data[key] = commonpb.NewBytes(entry.Data)
-		i++
+		data[key] = entry.Data
 	}
 
-	response := commonpb.CommandResponse{Response: commonpb.NewMap(data)}
+	b, err := msgpack.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	response := commonpb.CommandResponse{Response: b}
 	return &response, nil
 }
 
@@ -159,7 +192,11 @@ func (cm *ClusterManager) HSet(hash string, args ...[]byte) (*commonpb.CommandRe
 
 	store.(*storage.HashMap).Set(data)
 
-	response := commonpb.CommandResponse{Response: commonpb.NewBool(true)}
+	b, err := msgpack.Marshal(true)
+	if err != nil {
+		return nil, err
+	}
+	response := commonpb.CommandResponse{Response: b}
 	return &response, nil
 }
 
@@ -171,7 +208,11 @@ func (cm *ClusterManager) HDel(hash string, args ...[]byte) (*commonpb.CommandRe
 
 	store, ok := cm.DataStore.Get(hash)
 	if !ok {
-		response := commonpb.CommandResponse{Response: commonpb.NewInt(0)}
+		b, err := msgpack.Marshal(0)
+		if err != nil {
+			return nil, err
+		}
+		response := commonpb.CommandResponse{Response: b}
 		return &response, nil
 	}
 
@@ -189,7 +230,11 @@ func (cm *ClusterManager) HDel(hash string, args ...[]byte) (*commonpb.CommandRe
 		cm.DataStore.Del(hash)
 	}
 
-	response := commonpb.CommandResponse{Response: commonpb.NewInt(int64(count))}
+	b, err := msgpack.Marshal(count)
+	if err != nil {
+		return nil, err
+	}
+	response := commonpb.CommandResponse{Response: b}
 	return &response, nil
 }
 
@@ -201,7 +246,11 @@ func (cm *ClusterManager) HKeys(hash string, args ...[]byte) (*commonpb.CommandR
 
 	store, ok := cm.DataStore.Get(hash)
 	if !ok {
-		response := commonpb.CommandResponse{Response: commonpb.NewNil()}
+		b, err := msgpack.Marshal([]string{})
+		if err != nil {
+			return nil, err
+		}
+		response := commonpb.CommandResponse{Response: b}
 		return &response, nil
 	}
 
@@ -210,12 +259,12 @@ func (cm *ClusterManager) HKeys(hash string, args ...[]byte) (*commonpb.CommandR
 	}
 
 	keys := store.(*storage.HashMap).Keys()
-	data := make([]*commonpb.Value, len(keys))
-	for i, key := range keys {
-		data[i] = commonpb.NewString(key)
-	}
 
-	response := commonpb.CommandResponse{Response: commonpb.NewList(data...)}
+	b, err := msgpack.Marshal(keys)
+	if err != nil {
+		return nil, err
+	}
+	response := commonpb.CommandResponse{Response: b}
 	return &response, nil
 }
 
@@ -236,7 +285,11 @@ func (cm *ClusterManager) LPush(listName string, args ...[]byte) (*commonpb.Comm
 
 	store.(*storage.ListMap).PushFront(args...)
 
-	response := commonpb.CommandResponse{Response: commonpb.NewBool(true)}
+	b, err := msgpack.Marshal(true)
+	if err != nil {
+		return nil, err
+	}
+	response := commonpb.CommandResponse{Response: b}
 	return &response, nil
 }
 
@@ -252,7 +305,11 @@ func (cm *ClusterManager) LPop(listName string, args ...[]byte) (*commonpb.Comma
 
 	store, ok := cm.DataStore.Get(listName)
 	if !ok {
-		response := commonpb.CommandResponse{Response: commonpb.NewNil()}
+		b, err := msgpack.Marshal([][]byte{})
+		if err != nil {
+			return nil, err
+		}
+		response := commonpb.CommandResponse{Response: b}
 		return &response, nil
 	}
 
@@ -265,12 +322,11 @@ func (cm *ClusterManager) LPop(listName string, args ...[]byte) (*commonpb.Comma
 		cm.DataStore.Del(listName)
 	}
 
-	data := make([]*commonpb.Value, len(values))
-	for i, value := range values {
-		data[i] = commonpb.NewBytes(value)
+	b, err := msgpack.Marshal(values)
+	if err != nil {
+		return nil, err
 	}
-
-	response := commonpb.CommandResponse{Response: commonpb.NewList(data...)}
+	response := commonpb.CommandResponse{Response: b}
 	return &response, nil
 }
 
@@ -291,7 +347,12 @@ func (cm *ClusterManager) RPush(listName string, args ...[]byte) (*commonpb.Comm
 
 	store.(*storage.ListMap).PushBack(args...)
 
-	response := commonpb.CommandResponse{Response: commonpb.NewBool(true)}
+	b, err := msgpack.Marshal(true)
+	if err != nil {
+		return nil, err
+	}
+
+	response := commonpb.CommandResponse{Response: b}
 	return &response, nil
 }
 
@@ -307,7 +368,11 @@ func (cm *ClusterManager) RPop(listName string, args ...[]byte) (*commonpb.Comma
 
 	store, ok := cm.DataStore.Get(listName)
 	if !ok {
-		response := commonpb.CommandResponse{Response: commonpb.NewNil()}
+		b, err := msgpack.Marshal([][]byte{})
+		if err != nil {
+			return nil, err
+		}
+		response := commonpb.CommandResponse{Response: b}
 		return &response, nil
 	}
 
@@ -320,12 +385,11 @@ func (cm *ClusterManager) RPop(listName string, args ...[]byte) (*commonpb.Comma
 		cm.DataStore.Del(listName)
 	}
 
-	data := make([]*commonpb.Value, len(values))
-	for i, value := range values {
-		data[i] = commonpb.NewBytes(value)
+	b, err := msgpack.Marshal(values)
+	if err != nil {
+		return nil, err
 	}
-
-	response := commonpb.CommandResponse{Response: commonpb.NewList(data...)}
+	response := commonpb.CommandResponse{Response: b}
 	return &response, nil
 }
 
@@ -336,7 +400,11 @@ func (cm *ClusterManager) LLen(listName string, args ...[]byte) (*commonpb.Comma
 
 	store, ok := cm.DataStore.Get(listName)
 	if !ok {
-		response := commonpb.CommandResponse{Response: commonpb.NewInt(0)}
+		b, err := msgpack.Marshal(0)
+		if err != nil {
+			return nil, err
+		}
+		response := commonpb.CommandResponse{Response: b}
 		return &response, nil
 	}
 
@@ -346,7 +414,11 @@ func (cm *ClusterManager) LLen(listName string, args ...[]byte) (*commonpb.Comma
 
 	len := store.(*storage.ListMap).Len()
 
-	response := commonpb.CommandResponse{Response: commonpb.NewInt(int64(len))}
+	b, err := msgpack.Marshal(len)
+	if err != nil {
+		return nil, err
+	}
+	response := commonpb.CommandResponse{Response: b}
 	return &response, nil
 }
 
@@ -368,6 +440,10 @@ func (cm *ClusterManager) LSet(listName string, args ...[]byte) (*commonpb.Comma
 
 	store.(*storage.ListMap).PushBack(args...)
 
-	response := commonpb.CommandResponse{Response: commonpb.NewBool(true)}
+	b, err := msgpack.Marshal(true)
+	if err != nil {
+		return nil, err
+	}
+	response := commonpb.CommandResponse{Response: b}
 	return &response, nil
 }

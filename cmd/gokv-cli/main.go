@@ -2,19 +2,20 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"time"
+	"unicode/utf8"
 
 	"gokv/internal/tls"
 	"gokv/proto/commonpb"
 	"gokv/proto/externalpb"
 
-	"encoding/json"
-
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
+	"github.com/vmihailenco/msgpack/v5"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -93,9 +94,50 @@ var runCmd = &cobra.Command{
 			log.Fatalf("Failed to run command: %v", err)
 		}
 
-		printValue(res.Response)
+		var result any
+		if len(res.Response) > 0 {
+			err = msgpack.Unmarshal(res.Response, &result)
+			if err != nil {
+				log.Fatalf("Failed to unmarshal response data: %v", err)
+			}
+		} else {
+			result = nil
+		}
+
+		result = convertBytesToStrings(result)
+
+		jsonValue, err := json.MarshalIndent(result, "", "  ")
+		if err != nil {
+			log.Fatalf("Failed to marshal json for printing: %v", err)
+		}
+
+		fmt.Print(string(jsonValue))
 		fmt.Print("\n")
 	},
+}
+
+func convertBytesToStrings(data any) any {
+	switch v := data.(type) {
+	case map[string]any:
+		newMap := make(map[string]any, len(v))
+		for key, val := range v {
+			newMap[key] = convertBytesToStrings(val)
+		}
+		return newMap
+	case []any:
+		newSlice := make([]any, len(v))
+		for i, val := range v {
+			newSlice[i] = convertBytesToStrings(val)
+		}
+		return newSlice
+	case []byte:
+		if utf8.ValidString(string(v)) {
+			return string(v)
+		}
+		return v
+	default:
+		return v
+	}
 }
 
 func init() {
@@ -129,20 +171,6 @@ func createConnection() (*grpc.ClientConn, error) {
 		grpc.WithTransportCredentials(creds),
 		grpc.WithConnectParams(grpc.ConnectParams{MinConnectTimeout: 5 * time.Second}),
 	)
-}
-
-func printValue(v *commonpb.Value) {
-	value, err := commonpb.ValueToInterface(v)
-	if err != nil {
-		log.Fatalf("Failed to convert value to interface: %v", err)
-	}
-
-	jsonValue, err := json.MarshalIndent(value, "", "  ")
-	if err != nil {
-		log.Fatalf("Failed to marshal json: %v", err)
-	}
-
-	fmt.Print(string(jsonValue))
 }
 
 func main() {
