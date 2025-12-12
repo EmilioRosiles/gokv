@@ -4,7 +4,7 @@ cluster:
 
 messaging:
   gossip_peer_count: 2
-  message_timeout: 1s
+  message_timeout: 3s
   message_retry: 3
   heartbeat_interval: 3s
 
